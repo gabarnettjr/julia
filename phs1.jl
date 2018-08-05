@@ -1,11 +1,26 @@
-function getWeights( z, x, m, phs, pol )
+using NearestNeighbors
+
+###########################################################################
+
+function getWeights( ; z=0., x=-3:3, m=1, phs=5, pol=3 )
+    #=
+    INPUT
+    z   : location where you want to approximate the derivative
+    x   : locations where function values are known
+    m   : derivative to approximate (0,1,2,...)
+    phs : exponent in polyharmonic spline RBF (1,3,5,...)
+    pol : highest degree polynomial in the basis (0,1,2,...)
+
+    OUTPUT
+    w : array of approximation weights
+    =#
 
     width = maximum(x) - minimum(x)                      #width of interval
     ell = length(x)                                     #length of vector x
 
     x = ( x - z ) / width     #shift to zero and scale by width of interval
 
-    #Initialize matrices if necessary:
+    #Initialize matrices:
     P = zeros( ell, pol+1 )
     A = zeros( ell+pol+1, ell+pol+1 )
     b = zeros( ell+pol+1 )
@@ -29,7 +44,7 @@ function getWeights( z, x, m, phs, pol )
     if ( ell >= pol+1 ) & ( phs >= m+1 )
         if mod(m,2) == 0
             b[1:ell] = prod( phs-(m-1) : phs ) .*
-                abs(0.-x) .^ (phs-m)
+                abs.(0.-x) .^ (phs-m)
         else
             b[1:ell] = prod( phs-(m-1) : phs ) .*
                 (0.-x) .^ (phs-m) .* sign.(collect(0.-x))
@@ -55,50 +70,81 @@ end
 
 ###########################################################################
 
-using NearestNeighbors
+function getDM( ; z=-.9:.1:.9, x=-1:.1:1, m=1,
+    phs=5, pol=3, stc=7 )
+    #=
+    INPUT
+    z   : locations where you want to approximate the derivative
+    x   : locations where function values are known
+    m   : derivative you want to approximate (0,1,2,...)
+    phs : exponent in the polyharmonic spline RBF (1,3,5,...)
+    pol : highest degree polynomial in the basis (0,1,2,...)
+    stc : stencil-size
 
-function getDM( x, X; m=1, phs=5, pol=3, stc=7 )
+    OUTPUT
+    W : sparse differentiation matrix
+    =#
     
-    ell = length(x)
-    L = length(X)
+    Lx = length(x)
+    Lz = length(z)
 
-    tmp = zeros( 2, ell )
+    tmp = zeros( 2, Lx )
     tmp[1,:] = x
     x = tmp
 
-    tmp = zeros( 2, L )
-    tmp[1,:] = X
-    X = tmp
+    tmp = zeros( 2, Lz )
+    tmp[1,:] = z
+    z = tmp
 
-    ii = repmat( (1:L).', stc, 1 )
-    jj = zeros( Int64, size(ii) )
+    ii = repmat( (1:Lz).', stc, 1 )
+    jj = zeros( Int64, stc, Lz )
 
-    w = zeros( stc, L )
+    w = zeros( stc, Lz )
 
     tree = KDTree( x )
 
-    for i in 1:L
-        ( jj[:,i], d ) = knn( tree, X[:,i], stc )
-        w[:,i] = getWeights( X[1,i], x[1,jj[:,i]], m, phs, pol )
+    for i in 1:Lz
+        jj[:,i], d = knn( tree, z[:,i], stc )
+        w[:,i] = getWeights( z=z[1,i], x=x[1,jj[:,i]], m=m,
+            phs=phs, pol=pol )
     end
 
-    return sparse( ii[:], jj[:], w[:], L, ell )
+    return sparse( ii[:], jj[:], w[:], Lz, Lx )
 
 end
 
 ###########################################################################
 
-function getPeriodicDM( x, X; m=1, phs=5, pol=3, stc=7, period=2*pi )
+function getPeriodicDM( ; z=(0:pi/10:2*pi)[1:end-1],
+    x=(0:pi/10:2*pi)[1:end-1], m=1,
+    phs=5, pol=3, stc=7, period=2*pi )
+    #=
+    INPUT
+    z      : locations where you want to approximate the derivative
+    x      : locations where function values are known
+    m      : derivative you want to approximate (0,1,2,...)
+    phs    : exponent in the polyharmonic spline RBF (1,3,5,...)
+    pol    : highest degree polynomial in the basis (0,1,2,...)
+    stc    : stencil-size
+    period : period of the data
 
-    pad = Int64( round( (stc+1)/2 ) )
+    OUTPUT
+    W : sparse differentiation matrix
+    =#
 
-    x = [ x[end-pad:end]-period, x, x[1:pad]+period ]
+    pad = Int64( round( (stc-1)/2 ) )
 
-    ell = length(x)
+    x = [ x[end-pad+1:end]-period; x; x[1:pad]+period ]
 
-    W = getDM( x, X, m, phs, pol, stc )
+    W = getDM( z=z, x=x, m=m, phs=phs, pol=pol, stc=stc )
 
-    return W     #NOT FINISHED YET
+    W[:,pad+1:2*pad] = W[:,pad+1:2*pad] + W[:,end-pad+1:end]
+
+    W[:,end-2*pad+1:end-pad] = W[:,end-2*pad+1:end-pad] + W[:,1:pad]
+
+    W = W[:,pad+1:end-pad]
+
+    return W
 
 end
 

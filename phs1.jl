@@ -32,7 +32,7 @@ function getWeights( z, x, m, phs, pol )
                 abs(0.-x) .^ (phs-m)
         else
             b[1:ell] = prod( phs-(m-1) : phs ) .*
-                (0.-x) .^ (phs-m) .* sign(collect(0.-x))
+                (0.-x) .^ (phs-m) .* sign.(collect(0.-x))
         end
     else
         error( "Bad parameter values." )
@@ -57,26 +57,49 @@ end
 
 using NearestNeighbors
 
-function getDM( x, X, m, phs, pol, stc )
+function getDM( x, X; m=1, phs=5, pol=3, stc=7 )
+    
+    ell = length(x)
+    L = length(X)
 
-   #  ell = length(X)
+    tmp = zeros( 2, ell )
+    tmp[1,:] = x
+    x = tmp
 
-   #  ii = repmat( 1:ell, 1, stc )
+    tmp = zeros( 2, L )
+    tmp[1,:] = X
+    X = tmp
 
-   #  w = zeros( ell, stc )
+    ii = repmat( (1:L).', stc, 1 )
+    jj = zeros( Int64, size(ii) )
 
-   #  tree = KDTree( x )
+    w = zeros( stc, L )
 
-   #  idx, d = knn( tree, X, stc, true )
+    tree = KDTree( x )
 
-   #  P = zeros( stc, pol+1 )
-   #  A = zeros( stc+pol+1, stc+pol+1 )
-   #  b = zeros( stc+pol+1 )
+    for i in 1:L
+        ( jj[:,i], d ) = knn( tree, X[:,i], stc )
+        w[:,i] = getWeights( X[1,i], x[1,jj[:,i]], m, phs, pol )
+    end
 
-   #  for i in 1:ell
-   #      w[i,:] = getWeights( X[i], x[jj[i,:]], m, phs, pol )
-   #  end
-
-    return x
+    return sparse( ii[:], jj[:], w[:], L, ell )
 
 end
+
+###########################################################################
+
+function getPeriodicDM( x, X; m=1, phs=5, pol=3, stc=7, period=2*pi )
+
+    pad = Int64( round( (stc+1)/2 ) )
+
+    x = [ x[end-pad:end]-period, x, x[1:pad]+period ]
+
+    ell = length(x)
+
+    W = getDM( x, X, m, phs, pol, stc )
+
+    return W     #NOT FINISHED YET
+
+end
+
+###########################################################################

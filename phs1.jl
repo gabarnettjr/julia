@@ -52,3 +52,31 @@ function getWeights( z, x, m, phs, pol )
     return w ./ width^m                    #return correctly scaled weights
 
 end
+
+###########################################################################
+
+using NearestNeighbors
+
+function getDM( x, X, m, phs, pol, stc )
+
+   #  ell = length(X)
+
+   #  ii = repmat( 1:ell, 1, stc )
+
+   #  w = zeros( ell, stc )
+
+   #  tree = KDTree( x )
+
+   #  idx, d = knn( tree, X, stc, true )
+
+   #  P = zeros( stc, pol+1 )
+   #  A = zeros( stc+pol+1, stc+pol+1 )
+   #  b = zeros( stc+pol+1 )
+
+   #  for i in 1:ell
+   #      w[i,:] = getWeights( X[i], x[jj[i,:]], m, phs, pol )
+   #  end
+
+    return x
+
+end

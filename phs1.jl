@@ -41,7 +41,7 @@ function getWeights( ; z=0., x=-3:3, m=1, phs=5, pol=3 )
         end
     end
     A[ 1:ell, ell+1:end ] = P
-    A[ ell+1:end, 1:ell ] = P.'
+    A[ ell+1:end, 1:ell ] = transpose(P)
 
     #First ell elements of the vector b contain the derivative of each RBF
     #basis function evaluated at 0:
@@ -104,7 +104,7 @@ function getDM( ; z=-.9:.1:.9, x=-1:.1:1, m=1,
     tmp[1,:] = z
     z = tmp
 
-    ii = repmat( (1:Lz).', stc, 1 )
+    ii = repmat( transpose(1:Lz), stc, 1 )
     jj = zeros( Int64, stc, Lz )
 
     w = zeros( stc, Lz )

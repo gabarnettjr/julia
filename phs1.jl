@@ -2,7 +2,7 @@ using NearestNeighbors
 
 ###########################################################################
 
-function getWeights( ; z=0., x=-3:3, m=1, phs=5, pol=3 )
+function getWeights(; z=0., x=-3:3, m=1, phs=5, pol=3)
     #=
     Uses polyharmonic splines and polynomials to get weights for
     approximating the derivative of a function based on function
@@ -22,12 +22,12 @@ function getWeights( ; z=0., x=-3:3, m=1, phs=5, pol=3 )
     width = maximum(x) - minimum(x)                      #width of interval
     ell = length(x)                                     #length of vector x
 
-    x = ( x - z ) / width     #shift to zero and scale by width of interval
+    x = (x - z) / width       #shift to zero and scale by width of interval
 
     #Initialize matrices:
-    P = zeros( ell, pol+1 )
-    A = zeros( ell+pol+1, ell+pol+1 )
-    b = zeros( ell+pol+1 )
+    P = zeros(ell, pol+1)
+    A = zeros(ell+pol+1, ell+pol+1)
+    b = zeros(ell+pol+1)
 
     #Fill in polynomial matrix:
     for j in 0:pol
@@ -37,24 +37,24 @@ function getWeights( ; z=0., x=-3:3, m=1, phs=5, pol=3 )
     #Fill in full polyharmonic spline plus polynomial matrix:
     for i in 1:ell
         for j in 1:ell
-            A[i,j] = abs( x[i] - x[j] ) .^ phs
+            A[i,j] = abs.(x[i] - x[j]) .^ phs
         end
     end
-    A[ 1:ell, ell+1:end ] = P
-    A[ ell+1:end, 1:ell ] = transpose(P)
+    A[1:ell, ell+1:end] = P
+    A[ell+1:end, 1:ell] = transpose(P)
 
     #First ell elements of the vector b contain the derivative of each RBF
     #basis function evaluated at 0:
-    if ( ell >= pol+1 ) & ( phs >= m+1 )
+    if (ell >= pol+1) & (phs >= m+1)
         if mod(m,2) == 0
-            b[1:ell] = prod( phs-(m-1) : phs ) .*
+            b[1:ell] = prod(phs-(m-1) : phs) .*
                 abs.(0.-x) .^ (phs-m)
         else
-            b[1:ell] = prod( phs-(m-1) : phs ) .*
+            b[1:ell] = prod(phs-(m-1) : phs) .*
                 (0.-x) .^ (phs-m) .* sign.(0.-x)
         end
     else
-        error( "Bad parameter values." )
+        error("Bad parameter values.")
     end
 
     #Last elements of vector b contain the derivative of each monomial
@@ -74,8 +74,8 @@ end
 
 ###########################################################################
 
-function getDM( ; z=-.9:.1:.9, x=-1:.1:1, m=1,
-    phs=5, pol=3, stc=7 )
+function getDM(; z=-.9:.1:.9, x=-1:.1:1, m=1,
+    phs=5, pol=3, stc=7)
     #=
     Uses polyharmonic splines and polynomials to get a sparse
     differentiation matrix for approximating the derivative of
@@ -96,36 +96,36 @@ function getDM( ; z=-.9:.1:.9, x=-1:.1:1, m=1,
     Lx = length(x)
     Lz = length(z)
 
-    tmp = zeros( 2, Lx )
+    tmp = zeros(2, Lx)
     tmp[1,:] = x
     x = tmp
 
-    tmp = zeros( 2, Lz )
+    tmp = zeros(2, Lz)
     tmp[1,:] = z
     z = tmp
 
-    ii = repmat( transpose(1:Lz), stc, 1 )
-    jj = zeros( Int64, stc, Lz )
+    ii = repmat(transpose(1:Lz), stc, 1)
+    jj = zeros(Int64, stc, Lz)
 
-    w = zeros( stc, Lz )
+    w = zeros(stc, Lz)
 
-    tree = KDTree( x )
+    tree = KDTree(x)
 
     for i in 1:Lz
-        jj[:,i], d = knn( tree, z[:,i], stc )
-        w[:,i] = getWeights( z=z[1,i], x=x[1,jj[:,i]], m=m,
-            phs=phs, pol=pol )
+        jj[:,i] = knn(tree, z[:,i], stc)[1]
+        w[:,i] = getWeights(z=z[1,i], x=x[1,jj[:,i]], m=m,
+            phs=phs, pol=pol)
     end
 
-    return sparse( ii[:], jj[:], w[:], Lz, Lx )
+    return sparse(ii[:], jj[:], w[:], Lz, Lx)
 
 end
 
 ###########################################################################
 
-function getPeriodicDM( ; z=(0:pi/10:2*pi)[1:end-1],
+function getPeriodicDM(; z=(0:pi/10:2*pi)[1:end-1],
     x=(0:pi/10:2*pi)[1:end-1], m=1,
-    phs=5, pol=3, stc=7, period=2*pi )
+    phs=5, pol=3, stc=7, period=2*pi)
     #=
     Uses polyharmonic splines and polynomials to get a sparse
     differentiation matrix for approximating the derivative of
@@ -144,11 +144,11 @@ function getPeriodicDM( ; z=(0:pi/10:2*pi)[1:end-1],
     W : sparse differentiation matrix
     =#
 
-    pad = Int64( round( (stc-1)/2 ) )
+    pad = Int64(round((stc-1)/2))
 
-    x = [ x[end-pad+1:end]-period; x; x[1:pad]+period ]
+    x = [x[end-pad+1:end]-period; x; x[1:pad]+period]
 
-    W = getDM( z=z, x=x, m=m, phs=phs, pol=pol, stc=stc )
+    W = getDM(z=z, x=x, m=m, phs=phs, pol=pol, stc=stc)
 
     W[:,pad+1:2*pad] = W[:,pad+1:2*pad] + W[:,end-pad+1:end]
 

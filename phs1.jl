@@ -4,6 +4,10 @@ using NearestNeighbors
 
 function getWeights( ; z=0., x=-3:3, m=1, phs=5, pol=3 )
     #=
+    Uses polyharmonic splines and polynomials to get weights for
+    approximating the derivative of a function based on function
+    values.
+
     INPUT
     z   : location where you want to approximate the derivative
     x   : locations where function values are known
@@ -25,12 +29,12 @@ function getWeights( ; z=0., x=-3:3, m=1, phs=5, pol=3 )
     A = zeros( ell+pol+1, ell+pol+1 )
     b = zeros( ell+pol+1 )
 
-    #Make polynomial matrix:
+    #Fill in polynomial matrix:
     for j in 0:pol
         P[:,j+1] = x.^j
     end
 
-    #Make the full polyharmonic spline plus polynomial matrix:
+    #Fill in full polyharmonic spline plus polynomial matrix:
     for i in 1:ell
         for j in 1:ell
             A[i,j] = abs( x[i] - x[j] ) .^ phs
@@ -47,7 +51,7 @@ function getWeights( ; z=0., x=-3:3, m=1, phs=5, pol=3 )
                 abs.(0.-x) .^ (phs-m)
         else
             b[1:ell] = prod( phs-(m-1) : phs ) .*
-                (0.-x) .^ (phs-m) .* sign.(collect(0.-x))
+                (0.-x) .^ (phs-m) .* sign.(0.-x)
         end
     else
         error( "Bad parameter values." )
@@ -62,7 +66,7 @@ function getWeights( ; z=0., x=-3:3, m=1, phs=5, pol=3 )
 
     w = A \ b                          #solve linear system for the weights
 
-    w = w[1:ell]          #remove the weights which will be multiplied by 0
+    w = w[1:ell]        #remove those weights which will be multiplied by 0
 
     return w ./ width^m                    #return correctly scaled weights
 
@@ -73,6 +77,10 @@ end
 function getDM( ; z=-.9:.1:.9, x=-1:.1:1, m=1,
     phs=5, pol=3, stc=7 )
     #=
+    Uses polyharmonic splines and polynomials to get a sparse
+    differentiation matrix for approximating the derivative of
+    a function.
+
     INPUT
     z   : locations where you want to approximate the derivative
     x   : locations where function values are known
@@ -119,6 +127,10 @@ function getPeriodicDM( ; z=(0:pi/10:2*pi)[1:end-1],
     x=(0:pi/10:2*pi)[1:end-1], m=1,
     phs=5, pol=3, stc=7, period=2*pi )
     #=
+    Uses polyharmonic splines and polynomials to get a sparse
+    differentiation matrix for approximating the derivative of
+    a periodic function.
+
     INPUT
     z      : locations where you want to approximate the derivative
     x      : locations where function values are known

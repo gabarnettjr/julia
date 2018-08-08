@@ -4,13 +4,19 @@ include("phs1.jl")
 
 ###########################################################################
 
-function plotPHSeigs(; frq=3, dx=1/16, pol=5, FD=false)
+function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, pol=5, showPlots=true)
+    
+    if mod(pol,2) == 0
+        FD = true
+    else
+        FD = false
+    end
     
     f(x) = sin.(frq*pi*x)
     fp(x) = frq*pi*cos.(frq*pi*x)
     
     x = -1+dx/2 : dx : 1-dx/2
-    s = .30 * dx
+    s = ptb/100 * dx
     x = x + s*( -1 + 2*rand(size(x)) )
     
     if FD & (mod(pol,2) == 0)
@@ -29,29 +35,41 @@ function plotPHSeigs(; frq=3, dx=1/16, pol=5, FD=false)
     if K == 1
         alp =  2.0 ^ -4
     elseif K == 2
-        alp = -2.0 ^ -8
+        alp = -2.0 ^ -7
     elseif K == 3
-        alp =  2.0 ^ -12
+        alp =  2.0 ^ -10
     elseif K == 4
-        alp = -2.0 ^ -16
+        alp = -2.0 ^ -13
     else
         error("Haven't considered this K yet.")
     end
     
     Wx  = getPeriodicDM(z=x, x=x, m=1,
         phs=phs, pol=pol, stc=stc, period=2.0)
+    
     Whv = getPeriodicDM(z=x, x=x, m=2*K,
         phs=phs, pol=pol, stc=stc, period=2.0)
     
     W = -Wx + alp*dx^(2*K-1)*Whv
-    println(maximum(abs.(W*f(x)+fp(x))))
+    maxErr = maximum(abs.(W*f(x)+fp(x)))
+    
+    D = eig(full(-Wx))[1]
+    e1 = diagm(D)
     
     D = eig(full(W))[1]
-    e = diagm(D)
-    println(maximum(real(e)))
+    e2 = diagm(D)
+    maxReal = maximum(real(e2))
     
-    scatter(real(e), imag(e), legend=false, color="black")
-
+    if showPlots
+        p1 = scatter(real(e1), imag(e1), legend=false, color="red",
+            title=@sprintf("maxErr=%g", maxErr))
+        p2 = scatter(real(e2), imag(e2), legend=false, color="black",
+            title=@sprintf("maxReal=%g", maxReal))
+        plot(p1, p2)
+    else
+        return maxErr, maxReal
+    end
+    
 end
 
 ###########################################################################

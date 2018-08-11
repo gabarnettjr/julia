@@ -1,8 +1,9 @@
 using NearestNeighbors
+using SparseArrays
 
 ###########################################################################
 
-function getWeights(; z=0., x=-3:3, m=1, phs=5, pol=3)
+function getWeights(; z=0, x=-3:3, m=1, phs=5, pol=3)
     #=
     Uses polyharmonic splines and polynomials to get weights for
     approximating the derivative of a function based on function
@@ -22,7 +23,7 @@ function getWeights(; z=0., x=-3:3, m=1, phs=5, pol=3)
     width = maximum(x) - minimum(x)                      #width of interval
     ell = length(x)                                     #length of vector x
 
-    x = (x - z) / width       #shift to zero and scale by width of interval
+    x = (x .- z) / width                  #shift to zero and scale by width
 
     #Initialize matrices:
     P = zeros(ell, pol+1)
@@ -48,10 +49,10 @@ function getWeights(; z=0., x=-3:3, m=1, phs=5, pol=3)
     if (ell >= pol+1) & (phs >= m+1)
         if mod(m,2) == 0
             b[1:ell] = prod(phs-(m-1) : phs) .*
-                abs.(0.-x) .^ (phs-m)
+                abs.(-x) .^ (phs-m)
         else
             b[1:ell] = prod(phs-(m-1) : phs) .*
-                (0.-x) .^ (phs-m) .* sign.(0.-x)
+                (-x) .^ (phs-m) .* sign.(-x)
         end
     else
         error("Bad parameter values.")
@@ -104,7 +105,7 @@ function getDM(; z=-.9:.1:.9, x=-1:.1:1, m=1,
     tmp[1,:] = z
     z = tmp
 
-    ii = repmat(transpose(1:Lz), stc, 1)
+    ii = repeat(transpose(1:Lz), stc, 1)
     jj = zeros(Int64, stc, Lz)
 
     w = zeros(stc, Lz)
@@ -146,7 +147,7 @@ function getPeriodicDM(; z=(0:pi/10:2*pi)[1:end-1],
 
     pad = Int64(round((stc-1)/2))
 
-    x = [x[end-pad+1:end]-period; x; x[1:pad]+period]
+    x = [x[end-pad+1:end].-period; x; x[1:pad].+period]
 
     W = getDM(z=z, x=x, m=m, phs=phs, pol=pol, stc=stc)
 

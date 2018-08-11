@@ -1,5 +1,8 @@
 using Plots
 gr()
+using LinearAlgebra
+using Printf
+
 include("phs1.jl")
 
 ###########################################################################
@@ -17,7 +20,7 @@ function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, pol=5, showPlots=true)
     
     x = -1+dx/2 : dx : 1-dx/2
     s = ptb/100 * dx
-    x = x + s*( -1 + 2*rand(size(x)) )
+    x = x + s*(-1 .+ 2*rand(Float64, size(x)))
     
     if FD & (mod(pol,2) == 0)
         phs = pol+1
@@ -53,11 +56,11 @@ function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, pol=5, showPlots=true)
     W = -Wx + alp*dx^(2*K-1)*Whv
     maxErr = maximum(abs.(W*f(x)+fp(x)))
     
-    D = eig(full(-Wx))[1]
-    e1 = diagm(D)
+    D = eigen(Matrix(-Wx)).values
+    e1 = Matrix(Diagonal(D))
     
-    D = eig(full(W))[1]
-    e2 = diagm(D)
+    D = eigen(Matrix(W)).values
+    e2 = Matrix(Diagonal(D))
     maxReal = maximum(real(e2))
     
     if showPlots

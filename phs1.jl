@@ -23,7 +23,7 @@ function getWeights(; z=0, x=-3:3, m=1, phs=5, pol=3)
     width = maximum(x) - minimum(x)                      #width of interval
     ell = length(x)                                     #length of vector x
 
-    x = (x .- z) / width                  #shift to zero and scale by width
+    x = (x .- z) / width      #shift to zero and scale by width of interval
 
     #Initialize matrices:
     P = zeros(ell, pol+1)

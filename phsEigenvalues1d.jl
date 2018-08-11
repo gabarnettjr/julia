@@ -1,5 +1,4 @@
-using Plots
-gr()
+using PyPlot
 using LinearAlgebra
 using Printf
 
@@ -19,6 +18,7 @@ function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, pol=5, showPlots=true)
     fp(x) = frq*pi*cos.(frq*pi*x)
     
     x = -1+dx/2 : dx : 1-dx/2
+    # x = range(-1+dx/2, stop=1-dx/2, step=dx)
     s = ptb/100 * dx
     x = x + s*(-1 .+ 2*rand(Float64, size(x)))
     
@@ -64,11 +64,14 @@ function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, pol=5, showPlots=true)
     maxReal = maximum(real(e2))
     
     if showPlots
-        p1 = scatter(real(e1), imag(e1), legend=false, color="red",
-            title=@sprintf("maxErr=%g", maxErr))
-        p2 = scatter(real(e2), imag(e2), legend=false, color="black",
-            title=@sprintf("maxReal=%g", maxReal))
-        plot(p1, p2)
+        figure()
+        subplot(121)
+        scatter(real(e1), imag(e1), color="red")
+        title(@sprintf("maxErr=%g", maxErr))
+        subplot(122)
+        scatter(real(e2), imag(e2), color="black")
+        title(@sprintf("maxReal=%g", maxReal))
+        show()
     else
         return maxErr, maxReal
     end

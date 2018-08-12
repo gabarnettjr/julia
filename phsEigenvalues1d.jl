@@ -67,11 +67,11 @@ function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, dt=dx/8, pol=5,
         figure(1)
         subplot(121)
         scatter(real(e1), imag(e1), color="red")
-        grid(:True)
+        grid(:true)
         title(@sprintf("maxReal=%g", maxReal1))
         subplot(122)
         scatter(real(e2), imag(e2), color="black")
-        grid(:True)
+        grid(:true)
         title(@sprintf("maxReal=%g", maxReal2))
         show()
     end

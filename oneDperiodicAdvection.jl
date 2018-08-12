@@ -5,6 +5,15 @@ include("rk.jl")
 include("phsEigenvalues1d.jl")
 
 ###########################################################################
+#=
+Solve the simple advection equation u_t + u_x = 0 on periodic [-1,1] using
+either regular finite differences or polyharmonic spline finite
+differences.  If you choose an even number for pol, then it uses regular
+finite differences, but if you choose an odd number for pol, it uses a
+larger stencil size and include polyharmonic spline radial basis functions
+in the basis.
+=#
+###########################################################################
 
 pol = 5                             #highest degree polynomial in the basis
 dx  = 1/64                                   #average spacing between nodes

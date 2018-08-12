@@ -6,7 +6,8 @@ include("phs1.jl")
 
 ###########################################################################
 
-function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, pol=5, showPlots=true)
+function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, dt=dx/8, pol=5,
+    showPlots=true)
     
     if mod(pol,2) == 0
         FD = true
@@ -56,25 +57,26 @@ function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, pol=5, showPlots=true)
     W = -Wx + alp*dx^(2*K-1)*Whv
     maxErr = maximum(abs.(W*f(x)+fp(x)))
     
-    D = eigen(Matrix(-Wx)).values
-    e1 = Matrix(Diagonal(D))
+    e1 = eigen(Matrix(-Wx*dt)).values
+    maxReal1 = maximum(real(e1))
     
-    D = eigen(Matrix(W)).values
-    e2 = Matrix(Diagonal(D))
-    maxReal = maximum(real(e2))
+    e2 = eigen(Matrix(W*dt)).values
+    maxReal2 = maximum(real(e2))
     
     if showPlots
-        figure()
+        figure(1)
         subplot(121)
         scatter(real(e1), imag(e1), color="red")
-        title(@sprintf("maxErr=%g", maxErr))
+        grid(:True)
+        title(@sprintf("maxReal=%g", maxReal1))
         subplot(122)
         scatter(real(e2), imag(e2), color="black")
-        title(@sprintf("maxReal=%g", maxReal))
+        grid(:True)
+        title(@sprintf("maxReal=%g", maxReal2))
         show()
-    else
-        return maxErr, maxReal
     end
+    
+    return e1, e2, x, W, maxReal1, maxReal2, maxErr
     
 end
 

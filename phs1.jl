@@ -46,7 +46,7 @@ function getWeights(; z=0, x=-3:3, m=1, phs=5, pol=3)
 
     #First ell elements of the vector b contain the derivative of each RBF
     #basis function evaluated at 0:
-    if (ell >= pol+1) & (phs >= m+1)
+    if (ell >= pol+1) & (phs >= m+1) & (mod(phs,2) == 1)
         if mod(m,2) == 0
             b[1:ell] = prod(phs-(m-1) : phs) .*
                 abs.(-x) .^ (phs-m)
@@ -55,7 +55,8 @@ function getWeights(; z=0, x=-3:3, m=1, phs=5, pol=3)
                 (-x) .^ (phs-m) .* sign.(-x)
         end
     else
-        error("Bad parameter values.")
+        error("Bad parameter values.  Please make sure that phs is an odd
+number, and that length(x)>=pol+1 and phs>=m+1.")
     end
 
     #Last elements of vector b contain the derivative of each monomial

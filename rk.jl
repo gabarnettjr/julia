@@ -16,7 +16,7 @@ end
 function rk2!(t, U, odefun, dt, q1)
 
     q1 = odefun(t,       U,         q1)
-    q2 = odefun(t+dt./2, U+dt/2*q1, q1)
+    q1 = odefun(t+dt./2, U+dt/2*q1, q1)
 
     t = t + dt
     U = U + dt * q1

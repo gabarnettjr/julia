@@ -33,37 +33,39 @@ function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, dt=dx/8, pol=5,
         K = Int64(round((pol+1)/2))
     else
         error("Invalid parameters.  Choose FD=true and pol=even
-            or FD=false and pol=odd.")
+or FD=false and pol=odd.")
     end
     
-    if K == 1
-        alp =  2.0 ^ -4
-    elseif K == 2
-        alp = -2.0 ^ -7
-    elseif K == 3
-        alp =  2.0 ^ -10
-    elseif K == 4
-        alp = -2.0 ^ -13
-    else
-        error("Haven't considered this K yet.")
-    end
+    alp = (-1+2*mod(K,2)) * 2.0 ^ -(1+3*K)
+    # if K == 1
+    #     alp =  2.0 ^ -4
+    # elseif K == 2
+    #     alp = -2.0 ^ -7
+    # elseif K == 3
+    #     alp =  2.0 ^ -10
+    # elseif K == 4
+    #     alp = -2.0 ^ -13
+    # else
+    #     error("Haven't considered this K yet.")
+    # end
     
     Wx  = getPeriodicDM(z=x, x=x, m=1,
-        phs=phs, pol=pol, stc=stc, period=2.0)
+        phs=phs, pol=pol, stc=stc, period=2)
     
     Whv = getPeriodicDM(z=x, x=x, m=2*K,
-        phs=phs, pol=pol, stc=stc, period=2.0)
+        phs=phs, pol=pol, stc=stc, period=2)
     
     W = -Wx + alp*dx^(2*K-1)*Whv
     maxErr = maximum(abs.(W*f(x)+fp(x)))
     
-    e1 = eigen(Matrix(-Wx*dt)).values
-    maxReal1 = maximum(real(e1))
-    
-    e2 = eigen(Matrix(W*dt)).values
-    maxReal2 = maximum(real(e2))
-    
     if showPlots
+        
+        e1 = eigen(Matrix(-Wx*dt)).values
+        maxReal1 = maximum(real(e1))
+        
+        e2 = eigen(Matrix(W*dt)).values
+        maxReal2 = maximum(real(e2))
+        
         figure(1)
         subplot(121)
         scatter(real(e1), imag(e1), color="red")
@@ -74,9 +76,10 @@ function PHSorFDeigs(; ptb=30, frq=3, dx=1/16, dt=dx/8, pol=5,
         grid(:true)
         title(@sprintf("maxReal=%g", maxReal2))
         show()
+        
     end
     
-    return e1, e2, x, W, maxReal1, maxReal2, maxErr
+    return x, W
     
 end
 

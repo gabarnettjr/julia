@@ -27,7 +27,10 @@ function timestepAndGetError(; showPlots=false, tf=2, ptb=35, frq=5,
     x, W = PHSorFDeigs(ptb=ptb, frq=frq, dx=dx, dt=dt, pol=pol,
         showPlots=showPlots)
     
-    U0 = cos.(frq*pi*x)                                  #initial condition
+    # U0 = zeros(size(x))
+    # ind = (x .< 0.5) .& (x .> -0.5)
+    # U0[ind] = ones(size(x[ind]))
+    U0 = cos.(frq*pi*x)
     U = copy(U0)
     
     t = 0
@@ -74,6 +77,7 @@ function timestepAndGetError(; showPlots=false, tf=2, ptb=35, frq=5,
     if showPlots
         figure(3)
         plot(x, U-U0)
+        # plot(x, U0)
         plot(x, zeros(size(x)), marker=".", linestyle="none")
         title(@sprintf("error at t=%g, and nodes", tf))
         show()
@@ -84,22 +88,22 @@ function timestepAndGetError(; showPlots=false, tf=2, ptb=35, frq=5,
 end
 
 ###########################################################################
-# #TESTING:
-# tf  = 4
-# ptb = 40
-# frq = 10
-# rks = 4
-# pol = 5
-# #TEST 1 (eigenvalue plots):
-# timestepAndGetError(showPlots=true, tf=tf, ptb=ptb, frq=frq, rks=rks,
-#     pol=pol, dx=1/64)
-# #TEST 2 (convergence rate):
-# n = 6
-# maxErr = zeros(n)
-# for i in 4:4+n-1
-#     maxErr[i-3] = timestepAndGetError(showPlots=false, tf=tf, ptb=ptb,
-#         frq=frq, rks=rks, pol=pol, dx=1/2^i)
-# end
-# println(maxErr)
-# print(maxErr[1:end-1] ./ maxErr[2:end])
+#TESTING:
+tf  = 2
+ptb = 40
+frq = 5
+rks = 4
+pol = 5
+#TEST 1 (eigenvalue plots):
+timestepAndGetError(showPlots=true, tf=tf, ptb=ptb, frq=frq, rks=rks,
+    pol=pol, dx=1/64)
+#TEST 2 (convergence rate):
+n = 6
+maxErr = zeros(n)
+for i in 4:4+n-1
+    maxErr[i-3] = timestepAndGetError(showPlots=false, tf=tf, ptb=ptb,
+        frq=frq, rks=rks, pol=pol, dx=1/2^i)
+end
+println(maxErr)
+print(maxErr[1:end-1] ./ maxErr[2:end])
 ###########################################################################

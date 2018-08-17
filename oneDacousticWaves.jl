@@ -6,12 +6,11 @@ using SparseArrays
 include("rk.jl")
 include("phs1.jl")
 
-function main(; plotSolution=false, plotEigenvalues=true,
-periodic=false, ptb=20, dx=1/32, phs=7, pol=5, stc=11, alp=2^-5)
+function main(; plotSolution=false, plotEigenvalues=true, frq=2, ptb=20,
+periodic=false, dx=1/32, phs=7, pol=5, stc=11, alp=2^-5)
     
-    tf = 1
-    dt = dx / 4
-    frq = 2
+    tf = 2
+    dt = dx / 2
     rks = 3
     
     x = -1-dx/2 : dx : 1+dx/2
@@ -21,7 +20,7 @@ periodic=false, ptb=20, dx=1/32, phs=7, pol=5, stc=11, alp=2^-5)
     xi = x[2:end-1]
     ni = length(xi)
 
-    U0 = [cos.(frq*pi*xi); zeros(size(xi))]
+    U0 = [cos.(pi*frq*xi); zeros(size(xi))]
 
     U = copy(U0)
     
@@ -125,11 +124,11 @@ periodic=false, ptb=20, dx=1/32, phs=7, pol=5, stc=11, alp=2^-5)
         subplot(121)
         plot(real(ei), imag(ei), marker=".", color="black",
             linestyle="none")
-        title(@sprintf("nonperiodic, maxReal=%g", maximum(real(ei))))
+        title(@sprintf("np, maxReal=%g", maximum(real(ei))))
         subplot(122)
         plot(real(eiPeriodic), imag(eiPeriodic), marker=".", color="black",
             linestyle="none")
-        title(@sprintf("periodic, maxReal=%g", maximum(real(eiPeriodic))))
+        title(@sprintf("p, maxReal=%g", maximum(real(eiPeriodic))))
         show()
     end
 

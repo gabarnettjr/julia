@@ -55,8 +55,8 @@ function getWeights(; z=0, x=-3:3, m=1, phs=5, pol=3)
                 (-x) .^ (phs-m) .* sign.(-x)
         end
     else
-        error("Bad parameter values.  Please make sure that phs is an odd
-number, and that length(x)>=pol+1 and phs>=m+1.")
+        error("Bad parameter values.  Please make sure that phs is an ",
+            "odd number, and that length(x)>=pol+1 and phs>=m+1.")
     end
 
     #Last elements of vector b contain the derivative of each monomial

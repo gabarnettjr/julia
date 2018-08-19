@@ -6,10 +6,18 @@ using SparseArrays
 include("rk.jl")
 include("phs1.jl")
 
-function main(; plotSolution=false, plotEigenvalues=true, frq=2, ptb=20,
-periodic=false, dx=1/32, phs=7, pol=5, stc=11, alp=2^-5)
-    
-    tf = 2
+function main(; plotSolution=false, plotEigenvalues=true, plotError=false,
+frq=2, ptb=30, periodic=false, dx=1/32, phs=7, pol=5, stc=11, alp=2^-9)
+    """
+    frq is the frequency of the initial condition
+    ptb is the percent perturbation from regularly-spaced nodes
+    dx is the average spacing of the nodes
+    phs is the exponent of the polyharmonic spline radial function
+    pol is the highest degree polynomial in the basis
+    stc is the stencil size
+    alp is the hyperviscosity parameter
+    """
+    tf = 10
     dt = dx / 2
     rks = 3
     
@@ -48,52 +56,51 @@ periodic=false, dx=1/32, phs=7, pol=5, stc=11, alp=2^-5)
     
     #Main weights for approximating spatial derivatives:
 
-    WxPeriodic = Matrix(getPeriodicDM(z=xi, x=xi, m=1,
-        phs=phs, pol=pol, stc=stc, period=2))
+    WxPeriodic = getPeriodicDM(z=xi, x=xi, m=1,
+        phs=phs, pol=pol, stc=stc, period=2)
 
-    WxDirichlet = Matrix(getDM(z=xi, x=x, m=1,
-        phs=phs, pol=pol, stc=stc))
+    WxDirichlet = getDM(z=xi, x=x, m=1,
+        phs=phs, pol=pol, stc=stc)
 
     WxNeumann = copy(WxDirichlet)
 
-    WhvPeriodic = Matrix(getPeriodicDM(z=xi, x=xi, m=pol+1,
-        phs=phs, pol=pol, stc=stc, period=2))
+    WhvPeriodic = getPeriodicDM(z=xi, x=xi, m=phs-1,
+        phs=phs, pol=pol, stc=stc, period=2)
 
-    WhvDirichlet = Matrix(getDM(z=xi, x=x, m=pol+1,
-        phs=phs, pol=pol, stc=stc))
+    WhvDirichlet = getDM(z=xi, x=x, m=phs-1,
+        phs=phs, pol=pol, stc=stc)
 
     WhvNeumann = copy(WhvDirichlet)
 
     for j in 2 : stc
-        for i in 1 : ni
-            WxDirichlet[i,j] = WxDirichlet[i,j] +
-                wDirichletLeft[j-1] * WxDirichlet[i,1]
-            WxDirichlet[i,end-(j-1)] = WxDirichlet[i,end-(j-1)] +
-                wDirichletRight[j-1] * WxDirichlet[i,end]
-            WxNeumann[i,j] = WxNeumann[i,j] +
-                wNeumannLeft[j-1] * WxNeumann[i,1]
-            WxNeumann[i,end-(j-1)] = WxNeumann[i,end-(j-1)] +
-                wNeumannRight[j-1] * WxNeumann[i,end]
-            WhvDirichlet[i,j] = WhvDirichlet[i,j] +
-                wDirichletLeft[j-1] * WhvDirichlet[i,1]
-            WhvDirichlet[i,end-(j-1)] = WhvDirichlet[i,end-(j-1)] +
-                wDirichletRight[j-1] * WhvDirichlet[i,end]
-            WhvNeumann[i,j] = WhvNeumann[i,j] +
-                wNeumannLeft[j-1] * WhvNeumann[i,1]
-            WhvNeumann[i,end-(j-1)] = WhvNeumann[i,end-(j-1)] +
-                wNeumannRight[j-1] * WhvNeumann[i,end]
-        end
+        WxDirichlet[:,j] = WxDirichlet[:,j] +
+            wDirichletLeft[j-1] * WxDirichlet[:,1]
+        WxDirichlet[:,end-(j-1)] = WxDirichlet[:,end-(j-1)] +
+            wDirichletRight[j-1] * WxDirichlet[:,end]
+        WxNeumann[:,j] = WxNeumann[:,j] +
+            wNeumannLeft[j-1] * WxNeumann[:,1]
+        WxNeumann[:,end-(j-1)] = WxNeumann[:,end-(j-1)] +
+            wNeumannRight[j-1] * WxNeumann[:,end]
+        WhvDirichlet[:,j] = WhvDirichlet[:,j] +
+            wDirichletLeft[j-1] * WhvDirichlet[:,1]
+        WhvDirichlet[:,end-(j-1)] = WhvDirichlet[:,end-(j-1)] +
+            wDirichletRight[j-1] * WhvDirichlet[:,end]
+        WhvNeumann[:,j] = WhvNeumann[:,j] +
+            wNeumannLeft[j-1] * WhvNeumann[:,1]
+        WhvNeumann[:,end-(j-1)] = WhvNeumann[:,end-(j-1)] +
+            wNeumannRight[j-1] * WhvNeumann[:,end]
     end
 
     WxDirichlet = WxDirichlet[:,2:end-1]
     WxNeumann = WxNeumann[:,2:end-1]
-    WhvPeriodic = alp*dx^(pol+1) * WhvPeriodic
-    WhvDirichlet = alp*dx^(pol+1) * WhvDirichlet[:,2:end-1]
-    WhvNeumann = alp*dx^(pol+1) * WhvNeumann[:,2:end-1]
+    WhvPeriodic = alp*dx^(phs-2) * WhvPeriodic
+    WhvDirichlet = alp*dx^(phs-2) * WhvDirichlet[:,2:end-1]
+    WhvNeumann = alp*dx^(phs-2) * WhvNeumann[:,2:end-1]
     
     #######################################################################
     # #TEST WxDirichlet and WxNeumann:
-    # figure()
+    # figure(1)
+    # clf()
     # k = 3
     # plot(xi, WxDirichlet*sin.(k*pi*xi) - k*pi*cos.(k*pi*xi))
     # plot(xi, WxNeumann*cos.(k*pi*xi) + k*pi*sin.(k*pi*xi))
@@ -103,32 +110,84 @@ periodic=false, dx=1/32, phs=7, pol=5, stc=11, alp=2^-5)
 
     #Get block matrix and possibly plot eigenvalues:
 
-    A = zeros(2*ni, 2*ni)
-    Aperiodic = zeros(2*ni, 2*ni)
+    #Fast way:
+    
+    # A = vcat(hcat(WhvNeumann, WxDirichlet),
+    #     hcat(WxNeumann, WhvDirichlet))
 
-    Aperiodic[1:ni,1:ni] = WhvPeriodic
+    # Aperiodic = vcat(hcat(WhvPeriodic, WxPeriodic),
+    #     hcat(WxPeriodic, WhvPeriodic))
+
+    #Other way:
+
+    A = SparseMatrixCSC(zeros(2*ni, 2*ni))
+    Aperiodic = SparseMatrixCSC(zeros(2*ni, 2*ni))
+
     Aperiodic[1:ni, ni+1:end] = WxPeriodic
     Aperiodic[ni+1:end, 1:ni] = WxPeriodic
+    if plotEigenvalues
+        eiPeriodicNohv = eigen(dt*Matrix(Aperiodic)).values
+    end
+    Aperiodic[1:ni,1:ni] = WhvPeriodic
     Aperiodic[ni+1:end, ni+1:end] = WhvPeriodic
+    if plotEigenvalues
+        eiPeriodic = eigen(dt*Matrix(Aperiodic)).values
+    end
 
-    A[1:ni, 1:ni] = WhvNeumann
     A[1:ni, ni+1:end] = WxDirichlet
     A[ni+1:end, 1:ni] = WxNeumann
+    if plotEigenvalues
+        eiNohv = eigen(Matrix(dt*A)).values
+    end
+    A[1:ni, 1:ni] = WhvNeumann
     A[ni+1:end, ni+1:end] = WhvDirichlet
+    if plotEigenvalues
+        ei = eigen(Matrix(dt*A)).values
+    end
 
     if plotEigenvalues
-        ei = eigen(dt*A).values
-        eiPeriodic = eigen(dt*Aperiodic).values
+        a = min(minimum(real(eiNohv)), minimum(real(eiPeriodicNohv)))
+        a = 1.05 * a
+        b = -a
+        c = -1.25
+        d = 1.25
         figure(2)
         clf()
-        subplot(121)
-        plot(real(ei), imag(ei), marker=".", color="black",
-            linestyle="none")
-        title(@sprintf("np, maxReal=%g", maximum(real(ei))))
-        subplot(122)
-        plot(real(eiPeriodic), imag(eiPeriodic), marker=".", color="black",
-            linestyle="none")
-        title(@sprintf("p, maxReal=%g", maximum(real(eiPeriodic))))
+        subplot(131)
+        plot(real(eiPeriodicNohv), imag(eiPeriodicNohv),
+            marker=".", color="black", linestyle="none")
+        title(@sprintf("periodic no HV, maxReal=%.2e",
+            maximum(real(eiPeriodicNohv))))
+        # axis(:image)
+        axis([a,b,c,d])
+        grid(:true)
+        subplot(132)
+        plot(real(eiNohv), imag(eiNohv), marker=".",
+            color="black", linestyle="none")
+        title(@sprintf("nonperiodic no HV, maxReal=%.2e",
+            maximum(real(eiNohv))))
+        # axis(:image)
+        axis([a,b,c,d])
+        grid(:true)
+        a = minimum(real(ei))
+        b = -0.05 * a
+        a = 1.05 * a
+        subplot(133)
+        plot(real(ei), imag(ei),
+            marker=".", color="black", linestyle="none")
+        title(@sprintf("nonperiodic with HV, maxReal=%.2e",
+            maximum(real(ei))))
+        # axis(:image)
+        axis([a,b,c,d])
+        grid(:true)
+        # subplot(144)
+        # plot(real(eiPeriodic), imag(eiPeriodic),
+        #     marker=".", color="black", linestyle="none")
+        # title(@sprintf("p HV, maxReal=%.2e",
+        #     maximum(real(eiPeriodic))))
+        # axis(:image)
+        # axis([a,b,c,d])
+        # grid(:true)
         show()
     end
 
@@ -165,27 +224,38 @@ periodic=false, dx=1/32, phs=7, pol=5, stc=11, alp=2^-5)
             error("Choose rks=3 or rks=4 for this problem.")
         end
         if maximum(abs.(U)) > 2
-            error("unstable in time.")
+            error(@sprintf("Unstable in time.  t=%g",t))
         end
         if plotSolution
             if mod(i, Int64(1/16/dx)) == 0
                 figure(3)
+                clf()
+                subplot(121)
                 plot(xi, U[1:ni])
                 axis(:image)
                 axis([-1,1,-1,1])
-                title(@sprintf("numerical solution, t=%1.2f",t))
+                title(@sprintf("rho, t=%1.2f",t))
+                subplot(122)
+                plot(xi, U[ni+1:end])
+                axis(:image)
+                axis([-1,1,-1,1])
+                title(@sprintf("u, t=%1.2f",t))
                 show()
                 pause(.01)
-                if i != nTimesteps
-                    clf()
-                end
             end
         end
     end
 
-    figure(4)
-    plot(xi, U[1:ni] - U0[1:ni])
-    title("error at final time")
-    show()
+    if plotError
+        figure(4)
+        clf()
+        subplot(121)
+        plot(xi, U[1:ni] - U0[1:ni])
+        title(@sprintf("error: rho, tf=%g",tf))
+        subplot(122)
+        plot(xi, U[ni+1:end])
+        title(@sprintf("error: u, tf=%g",tf))
+        show()
+    end
 
 end

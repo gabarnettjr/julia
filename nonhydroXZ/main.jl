@@ -3,8 +3,8 @@ using PyPlot
 using LinearAlgebra
 using DelimitedFiles
 
-include("rk.jl")
-include("phs1.jl")
+include("../rk.jl")
+include("../phs1.jl")
 
 ###########################################################################
 
@@ -30,7 +30,7 @@ contours = 20
 
 #Get string for saving results:
 
-saveString = string("./nonhydroXZresults/", testCase, "_")
+saveString = string("./results/", testCase, "_")
 
 if verticallyLagrangian
     saveString = string(saveString, "vLag", "_")
@@ -49,16 +49,16 @@ if ( saveArrays ) & ( ! contourFromSaved )
 end
 
 if saveContours
-    tmp = walkdir("nonhydroXZresults")
+    tmp = walkdir("results")
     for (roots, dirs, files) in tmp
         for file in files
             if endswith(file, ".png") | endswith(file, ".PNG")
                 if Sys.islinux()
                     # print(string("nonhydroXZresults","/",file,"\n"))
-                    rm(string("nonhydroXZresults","/",file))
+                    rm(string("results","/",file))
                 elseif Sys.iswindows()
                     # print(string("nonhydroXZresults","\\",file,"\n"))
-                    rm(string("nonhydroXZresults","\\",file))
+                    rm(string("results","\\",file))
                 else
                     error("Only implemented for linux and windows.")
                 end
@@ -420,7 +420,6 @@ function contourSomething(U, t)
 
     zz = U[:,:,5] ./ g
 
-    figure()
     clf()
     contourf(xx, zz, tmp, contours)
     if testCase != "inertiaGravityWaves"
@@ -429,7 +428,7 @@ function contourSomething(U, t)
     else
         colorbar(orientation="horizontal")
     end
-    savefig(@sprintf("./nonhydroXZresults/%04d.png",Int64(round(t))),
+    savefig(@sprintf("%04d.png",Int64(round(t))),
         bbox_inches="tight")
 
 end

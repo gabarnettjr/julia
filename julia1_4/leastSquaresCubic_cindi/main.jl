@@ -17,8 +17,8 @@ A[:,4] = ones( size(t) )
 x = A \ b
 
 # The least-squares cubic polynomial function:
-function P(t)
-    x[1] * t.^3 + x[2] * t.^2 + x[3] * t + x[4] * ones(size(t))
+function P(t; c=x)
+    c[1] * t.^3 .+ c[2] * t.^2 .+ c[3] * t .+ c[4] * ones(size(t))
 end
 
 # A dense set of t-values between 0 and 40:
@@ -26,7 +26,7 @@ T = range(0, stop=40, length=80)
 
 # Plot showing the polynomial and the given data values:
 p1 = plot(T, P(T), lw=2, label="cubic")
-scatter!(t, P(t), label="given data", title="Least-Squares Cubic")
+scatter!(t, b, label="given data", title="Least-Squares Cubic")
 
 # Plot showing the 9 values of the residual vector:
 p2 = plot(t, P(t)-b, legend=false)

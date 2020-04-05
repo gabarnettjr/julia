@@ -2,40 +2,42 @@ using NearestNeighbors
 using SparseArrays
 
 ###########################################################################
+"""
+    getWeights(; z = 0, x = -3:3, m = 1, phs = 5, pol = 3)
 
-function getWeights(; z=0, x=-3:3, m=1, phs=5, pol=3)
-    #=
+# Description
     Uses polyharmonic splines and polynomials to get weights for
     approximating the derivative of a function based on function
     values.
 
-    INPUT
+# Input
     z   : location where you want to approximate the derivative
     x   : locations where function values are known
     m   : derivative to approximate (0,1,2,...)
     phs : exponent in polyharmonic spline RBF (1,3,5,...)
     pol : highest degree polynomial in the basis (0,1,2,...)
 
-    OUTPUT
+# Output
     w : array of approximation weights
-    =#
+"""
+function getWeights(; z = 0, x = -3:3, m = 1, phs = 5, pol = 3)
 
     width = maximum(x) - minimum(x)                      #width of interval
     ell = length(x)                                     #length of vector x
 
-    x = (x .- z) / width      #shift to zero and scale by width of interval
+    x = (x .- z) ./ width     #shift to zero and scale by width of interval
 
-    #Initialize matrices:
+    # Initialize matrices:
     P = zeros(ell, pol+1)
     A = zeros(ell+pol+1, ell+pol+1)
     b = zeros(ell+pol+1)
 
-    #Fill in polynomial matrix:
+    # Fill in polynomial matrix:
     for j in 0:pol
-        P[:,j+1] = x.^j
+        P[:,j+1] = x .^ j
     end
 
-    #Fill in full polyharmonic spline plus polynomial matrix:
+    # Fill in full polyharmonic spline plus polynomial matrix:
     for i in 1:ell
         for j in 1:ell
             A[i,j] = abs.(x[i] - x[j]) .^ phs
@@ -44,8 +46,8 @@ function getWeights(; z=0, x=-3:3, m=1, phs=5, pol=3)
     A[1:ell, ell+1:end] = P
     A[ell+1:end, 1:ell] = transpose(P)
 
-    #First ell elements of the vector b contain the derivative of each RBF
-    #basis function evaluated at 0:
+    # First ell elements of the vector b contain the derivative of each RBF
+    # basis function evaluated at 0:
     if (ell >= pol+1) & (phs >= m+1) & (mod(phs,2) == 1)
         if mod(m,2) == 0
             b[1:ell] = prod(phs-(m-1) : phs) .*
@@ -56,12 +58,12 @@ function getWeights(; z=0, x=-3:3, m=1, phs=5, pol=3)
         end
     else
         error("Bad parameter values.  Please make sure that phs is an ",
-            "odd number, and that length(x)>=pol+1 and phs>=m+1.")
+              "odd number, and that length(x)>=pol+1 and phs>=m+1.")
     end
 
-    #Last elements of vector b contain the derivative of each monomial
-    #basis function evaluated at 0 (these derivatives are all zero except
-    #maybe one of them):
+    # Last elements of vector b contain the derivative of each monomial
+    # basis function evaluated at 0 (these derivatives are all zero except
+    # maybe one of them):
     if pol >= m
         b[ell+m+1] = factorial(m)
     end
@@ -75,15 +77,16 @@ function getWeights(; z=0, x=-3:3, m=1, phs=5, pol=3)
 end
 
 ###########################################################################
+"""
+    getDM(; z = -.9:.1:.9, x = -1:.1:1, m = 1,
+        phs = 5, pol = 3, stc = 7)
 
-function getDM(; z=-.9:.1:.9, x=-1:.1:1, m=1,
-    phs=5, pol=3, stc=7)
-    #=
+# Description
     Uses polyharmonic splines and polynomials to get a sparse
     differentiation matrix for approximating the derivative of
     a function.
 
-    INPUT
+# Input
     z   : locations where you want to approximate the derivative
     x   : locations where function values are known
     m   : derivative you want to approximate (0,1,2,...)
@@ -91,9 +94,11 @@ function getDM(; z=-.9:.1:.9, x=-1:.1:1, m=1,
     pol : highest degree polynomial in the basis (0,1,2,...)
     stc : stencil-size
 
-    OUTPUT
+# Output
     W : sparse differentiation matrix
-    =#
+"""
+function getDM(; z = -.9:.1:.9, x = -1:.1:1, m = 1,
+    phs = 5, pol = 3, stc = 7)
     
     Lx = length(x)
     Lz = length(z)
@@ -124,16 +129,17 @@ function getDM(; z=-.9:.1:.9, x=-1:.1:1, m=1,
 end
 
 ###########################################################################
+"""
+    getPeriodicDM(; z = (0:pi/10:2*pi)[1:end-1],
+        x = (0:pi/10:2*pi)[1:end-1], m = 1,
+        phs = 5, pol = 3, stc = 7, period = 2*pi)
 
-function getPeriodicDM(; z=(0:pi/10:2*pi)[1:end-1],
-    x=(0:pi/10:2*pi)[1:end-1], m=1,
-    phs=5, pol=3, stc=7, period=2*pi)
-    #=
+# Description
     Uses polyharmonic splines and polynomials to get a sparse
     differentiation matrix for approximating the derivative of
     a periodic function.
 
-    INPUT
+# Input
     z      : locations where you want to approximate the derivative
     x      : locations where function values are known
     m      : derivative you want to approximate (0,1,2,...)
@@ -142,9 +148,12 @@ function getPeriodicDM(; z=(0:pi/10:2*pi)[1:end-1],
     stc    : stencil-size
     period : period of the data
 
-    OUTPUT
+# Output
     W : sparse differentiation matrix
-    =#
+"""
+function getPeriodicDM(; z = (0:pi/10:2*pi)[1:end-1],
+    x = (0:pi/10:2*pi)[1:end-1], m = 1,
+    phs = 5, pol = 3, stc = 7, period = 2*pi)
 
     pad = Int64(round((stc-1)/2))
 
@@ -159,6 +168,26 @@ function getPeriodicDM(; z=(0:pi/10:2*pi)[1:end-1],
     W = W[:,pad+1:end-pad]
 
     return W
+
+end
+
+###########################################################################
+
+function speedtest_getWeights()
+
+    function myTimer(N, Z)
+        @time begin
+            for i in 1:N
+                w = getWeights(z = Z[i]);
+            end
+        end
+    end
+
+    for n in 0:16
+        N = 2^n;
+        Z = -3 .+ 6*rand(N);
+        myTimer(N, Z);
+    end
 
 end
 

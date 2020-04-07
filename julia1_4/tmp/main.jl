@@ -1,3 +1,16 @@
+# x = 0;
+# 
+# function myForLoop(x)
+#     for i in 1 : 100
+#         x = x + 1;
+#     end
+#     return x
+# end
+# 
+# x = myForLoop(x)
+
+####################################################
+
 using Primes
 
 a = 9

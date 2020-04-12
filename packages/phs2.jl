@@ -1,28 +1,29 @@
 using NearestNeighbors
 using SparseArrays
+using LinearAlgebra
 
 ###########################################################################
 
-function phi( x, y, phs )
-    return sqrt.( x .^2 + y .^ 2 ) .^ phs
+function phi(x, y, phs)
+    return sqrt.(x .^ 2 + y .^ 2) .^ phs
 end
 
-function phi_x( x, y, phs )
-    return phs .* x .* sqrt.( x .^ 2 + y .^ 2 ) .^ ( phs - 2 )
+function phi_x(x, y, phs)
+    return phs .* x .* sqrt.(x .^ 2 + y .^ 2) .^ (phs - 2)
 end
 
-function phi_y( x, y, phs )
-    return phs .* y .* sqrt.( x .^ 2 + y .^ 2 ) .^ ( phs - 2 )
+function phi_y(x, y, phs)
+    return phs .* y .* sqrt.(x .^ 2 + y .^ 2) .^ (phs - 2)
 end
 
-function phiHV( x, y, phs, K )
-    z = range( phs - 2*(K-1), step = 2, stop = phs ) ;
-    return prod( z .^ 2 ) .* sqrt.( x .^ 2 + y .^ 2 ) .^ ( phs - 2*K );
+function phiHV(x, y, phs, K)
+    z = range(phs - 2*(K-1), step = 2, stop = phs);
+    return prod(z .^ 2) .* sqrt.(x .^ 2 + y .^ 2) .^ (phs - 2*K);
 end
 
 ###########################################################################
 """
-    getWeights( xy, XY, mn, phs, pol, K )
+    getWeights(xy, XY_o, mn, phs, pol, K)
 
 # Description
     Uses polyharmonic splines and polynomials to get weights for
@@ -30,24 +31,27 @@ end
     values.
 
 # Input
-    xy  : single spot where you want to get the derivative (2x1)
-    XY  : locations where function values are known (2 columns)
-    mn  : derivative to approximate (1x2)
-    phs : exponent in polyharmonic spline RBF (1,3,5,...)
-    pol : highest degree polynomial in the basis (0,1,2,...)
-    K   : Hyperviscosity exponent
+    xy   : single spot where you want to get the derivative (2x1)
+    XY_o : locations where function values are known (2 columns)
+    mn   : derivative to approximate (1x2)
+    phs  : exponent in polyharmonic spline RBF (1,3,5,...)
+    pol  : highest degree polynomial in the basis (0,1,2,...)
+    K    : Hyperviscosity exponent
 
 # Output
     w : array of approximation weights
 """
-function getWeights( xy, XY, mn, phs, pol, K )
+function getWeights(xy, XY_o, mn, phs, pol, K)
 
     # Set ell equal to the number of points in XY
-    ell = size( XY, 1 ) ;
+    ell = size(XY_o, 1);
+    
+    # Initialize the shifted nodes:
+    XY = zeros(size(XY_o));
 
     # Shift so xy is at (0,0)
     for i in 1 : ell
-        XY[i,:] = XY[i,:] .- xy ;
+        XY[i,:] = XY_o[i,:] .- xy;
     end
 
     # # normalize by the maximum radius
@@ -56,79 +60,85 @@ function getWeights( xy, XY, mn, phs, pol, K )
     # XY = XY ./ r;
 
     # Calculate the total number of polynomial basis functions
-    nPol = Int( ( pol + 1 ) * ( pol + 2 ) / 2 ) ;
+    nPol = Int((pol + 1) * (pol + 2) / 2);
 
     # Initialize matrices
-    P = zeros( ell, nPol ) ;
-    A = zeros( ell + nPol, ell + nPol ) ;
-    b = zeros( ell + nPol ) ;
+    P = zeros(ell, nPol);
+    A = zeros(ell + nPol, ell + nPol);
+    b = zeros(ell + nPol);
 
     # Fill in  the polynomial matrix
-    if pol > -1
-        P[:,1] .= 1 ;
+    if (pol > -1)
+        P[:,1] .= 1;
     end
-    if pol > 0
-        P[:,2]  = XY[:,1]                      ;
-        P[:,3]  = XY[:,2]                      ;
+    if (pol > 0)
+        P[:,2]  = XY[:,1]                     ;
+        P[:,3]  = XY[:,2]                     ;
     end
-    if pol > 1
-        P[:,4]  = XY[:,1] .^ 2                 ;
-        P[:,5]  = XY[:,1]      .* XY[:,2]      ;
-        P[:,6]  =                 XY[:,2] .^ 2 ;
+    if (pol > 1)
+        P[:,4]  = XY[:,1] .^ 2                ;
+        P[:,5]  = XY[:,1]      .* XY[:,2]     ;
+        P[:,6]  =                 XY[:,2] .^ 2;
     end
-    if pol > 2
-        P[:,7]  = XY[:,1] .^ 3                 ;
-        P[:,8]  = XY[:,1] .^ 2 .* XY[:,2]      ;
-        P[:,9]  = XY[:,1]      .* XY[:,2] .^ 2 ;
-        P[:,10] =                 XY[:,2] .^ 3 ;
+    if (pol > 2)
+        P[:,7]  = XY[:,1] .^ 3                ;
+        P[:,8]  = XY[:,1] .^ 2 .* XY[:,2]     ;
+        P[:,9]  = XY[:,1]      .* XY[:,2] .^ 2;
+        P[:,10] =                 XY[:,2] .^ 3;
     end
-    if pol > 3
-        P[:,11] = XY[:,1] .^ 4                 ;
-        P[:,12] = XY[:,1] .^ 3 .* XY[:,2]      ;
-        P[:,13] = XY[:,1] .^ 2 .* XY[:,2] .^ 2 ;
-        P[:,14] = XY[:,1]      .* XY[:,2] .^ 3 ;
-        P[:,15] =                 XY[:,2] .^ 4 ;
+    if (pol > 3)
+        P[:,11] = XY[:,1] .^ 4                ;
+        P[:,12] = XY[:,1] .^ 3 .* XY[:,2]     ;
+        P[:,13] = XY[:,1] .^ 2 .* XY[:,2] .^ 2;
+        P[:,14] = XY[:,1]      .* XY[:,2] .^ 3;
+        P[:,15] =                 XY[:,2] .^ 4;
     end
-    if pol > 4
-        P[:,16] = XY[:,1] .^ 5                 ;
-        P[:,17] = XY[:,1] .^ 4 .* XY[:,2]      ;
-        P[:,18] = XY[:,1] .^ 3 .* XY[:,2] .^ 2 ;
-        P[:,19] = XY[:,1] .^ 2 .* XY[:,2] .^ 3 ;
-        P[:,20] = XY[:,1]      .* XY[:,2] .^ 4 ;
-        P[:,21] =                 XY[:,2] .^ 5 ;
+    if (pol > 4)
+        P[:,16] = XY[:,1] .^ 5                ;
+        P[:,17] = XY[:,1] .^ 4 .* XY[:,2]     ;
+        P[:,18] = XY[:,1] .^ 3 .* XY[:,2] .^ 2;
+        P[:,19] = XY[:,1] .^ 2 .* XY[:,2] .^ 3;
+        P[:,20] = XY[:,1]      .* XY[:,2] .^ 4;
+        P[:,21] =                 XY[:,2] .^ 5;
     end
 
     # Fill in the polyharmonic spline matrix:
     for i in 1:ell
         for j in 1:ell
-            A[i,j] = phi( XY[i,1] - XY[j,1] , XY[i,2] - XY[j,2] , phs ) ;
+            A[i,j] = phi(XY[i,1] - XY[j,1], XY[i,2] - XY[j,2], phs);
         end
     end
-    A[1:ell, ell+1:end] = P
-    A[ell+1:end, 1:ell] = transpose(P)
+    A[1:ell, ell+1:end] = P;
+    A[ell+1:end, 1:ell] = transpose(P);
+
+    println()
+    println(cond(A))
 
     # First ell elements of the vector b contain the derivative of each RBF
     # basis function evaluated at 0, and there might be nonzero elements
     # after that which account for the derivatives of the polynomials
-    if ( ell >= nPol ) & ( phs >= maximum(mn)+1 ) & ( mod(phs,2) == 1 )
-        if ( mn == [ 0 0 ] )
-            b[1:ell] = phi( -XY[:,1], -XY[:,2], phs ) ;
+    if (ell >= nPol) & (phs >= 2*maximum(mn)+1) & (mod(phs,2) == 1)
+        if (mn == [0 0])
+            b[1:ell] = phi(-XY[:,1], -XY[:,2], phs);
             if pol >= 0
-                b[ell+1] = 1 ;
+                b[ell+1] = 1.;
             end
-        elseif ( mn == [ 1 0 ] )
-            b[1:ell] = phi_x( -XY[:,1], -XY[:,2], phs ) ;
+        elseif (mn == [1 0])
+            b[1:ell] = phi_x(-XY[:,1], -XY[:,2], phs);
             if pol >=  1
-                b[ell+2] = 1 ;
+                b[ell+2] = 1.;
             end
-        elseif ( mn == [ 0 1 ] )
-            b[1:ell] = phi_y( -XY[:,1], -XY[:,2], phs ) ;
+        elseif (mn == [0 1])
+            b[1:ell] = phi_y(-XY[:,1], -XY[:,2], phs);
             if pol >= 1
-                b[ell+3] = 1 ;
+                b[ell+3] = 1.;
             end
-        elseif ( mn == [ -1 -1 ] )
-            if ( phs >= 2*K+1 )
-                b[1:ell] = phiHV( -XY[:,1], -XY[:,2], phs, K ) ;
+        elseif (mn == [-1 -1])
+            if (K < 1)
+                error("The exponent for the Laplacian should be at least 1.")
+            end
+            if (phs >= 2*K+1)
+                b[1:ell] = phiHV(-XY[:,1], -XY[:,2], phs, K);
             else
                 error("Need phs to be larger to approximate this derivative.")
             end
@@ -137,19 +147,59 @@ function getWeights( xy, XY, mn, phs, pol, K )
         end
     else
         error("Bad parameter values.  Please make sure that phs is an ",
-              "odd number, and that length(XY)>=nPol and phs>=max(mn)+1.",
-              "also, it could be that the derivative you are requesting",
+              "odd number, and that length(XY)>=nPol and phs>=2*max(mn)+1.",
+              "Also, it could be that the derivative you are requesting",
               "is not yet implemented.")
     end
 
     #solve linear system for the weights
-    w = A \ b ;
+    w = A \ b;
 
     #remove those weights which will be multiplied by 0
-    w = w[ 1 : ell ] ;
+    w = w[1 : ell];
 
-    #return weights
+    #return the array of weights
     return w
+
+end
+
+###########################################################################
+
+function test_getWeights(mn, phs, pol, K)
+
+    alp = 1.;
+
+    x = alp .* [-5 -3 -1 1 3 5];
+    y = alp .* [-5 -3 -1 1 3 5];
+    xy = alp .* [-0.22987; 0.159];
+
+    # x = alp .* [-2. -1. 0. 1. 2.];
+    # y = alp .* [-2. -1. 0. 1. 2.];
+    # xy = [0; 0];
+
+    X = repeat(x, length(y));
+    Y = transpose(repeat(y, length(x)));
+    XY = hcat(X[:], Y[:]);
+
+    w = getWeights(xy, XY, mn, phs, pol, K);
+
+    # f(x, y) = 1. .* ones(size(x));
+    # f_x(x, y) = 0. .* ones(size(x));
+    # f_y(x, y) = 0. * ones(size(x));
+
+    f(x, y) = x .* y;
+    f_x(x, y) = y;
+    f_y(x, y) = x;
+
+    # f(x, y) = x .^ 2 + y .^ 2;
+    # f_x(x, y) = 2. .* x;
+    # f_y(x, y) = 2. .* y;
+
+    println()
+    println(w' * f(XY[:,1], XY[:,2]) - f(xy[1], xy[2]))
+    println()
+
+    w = reshape(w, length(y), length(x))
 
 end
 

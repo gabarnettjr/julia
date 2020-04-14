@@ -33,7 +33,7 @@ end
     x   : locations where function values are known (2 rows)
     m   : derivative to approximate (1x2)
     phs : odd exponent in polyharmonic spline RBF (1,3,5,...)
-    pol : highest degree polynomial in the basis (0,1,2,...)
+    pol : highest degree polynomial in the basis (0,1,2,3,4,5)
     K   : hyperviscosity exponent (1,2,3,...)
 
 # Output
@@ -52,7 +52,7 @@ function getWeights(z, x, m, phs, pol, K)
         XY[:,i] = x[:,i] .- z
     end
 
-    # Calculate the total number of polynomial basis functions
+    # Calculate the total number of 2D polynomial basis functions
     nPol = Int((pol + 1) * (pol + 2) / 2)
 
     # Initialize matrices
@@ -111,26 +111,26 @@ function getWeights(z, x, m, phs, pol, K)
     # basis function evaluated at 0, and there might be nonzero elements
     # after that which account for the derivatives of the polynomials
     if (ell >= nPol) & (phs >= 2*maximum(m)+1) & (mod(phs,2) == 1)
-        if (m == [0 0])
+        if m == [0 0]
             b[1:ell] = phi(-XY[1,:], -XY[2,:], phs)
             if pol > -1
                 b[ell+1] = 1.
             end
-        elseif (m == [1 0])
+        elseif m == [1 0]
             b[1:ell] = phi_x(-XY[1,:], -XY[2,:], phs)
             if pol >  0
                 b[ell+2] = 1.
             end
-        elseif (m == [0 1])
+        elseif m == [0 1]
             b[1:ell] = phi_y(-XY[1,:], -XY[2,:], phs)
             if pol > 0
                 b[ell+3] = 1.
             end
-        elseif (m == [-1 -1])
-            if (K < 1)
+        elseif m == [-1 -1]
+            if K < 1
                 error("The exponent for the Laplacian should be at least 1.")
             end
-            if (phs >= 2*K+1)
+            if phs >= 2*K+1
                 b[1:ell] = phiHV(-XY[1,:], -XY[2,:], phs, K)
             else
                 error("Need phs to be larger to approximate this derivative.")
@@ -159,16 +159,16 @@ function test_getWeights(m, phs, pol, K)
 
     alp = 1.;
 
-    x1 = alp .* [-5 -3 -1 1 3 5];
-    x2 = alp .* [-5 -3 -1 1 3 5];
-    z = alp .* [-0.22987; 0.159];
+    # x1 = alp .* [-5 -3 -1 1 3 5];
+    # x2 = alp .* [-5 -3 -1 1 3 5];
+    # z = alp .* [-0.22987; 0.159];
 
-    # x1 = alp .* [-2. -1. 0. 1. 2.];
-    # x2 = alp .* [-2. -1. 0. 1. 2.];
-    # z = [0; 0];
+    x1 = alp .* [-2. -1. 0. 1. 2.];
+    x2 = alp .* [-2. -1. 0. 1. 2.];
+    z = alp .* [0.234; -0.764];
 
-    X = repeat(x1, length(x2));
-    Y = transpose(repeat(x2, length(x1)));
+    X = repeat(x1, length(x2), 1);
+    Y = repeat(x2', 1, length(x1));
     x = vcat(X[:]', Y[:]');
 
     w = getWeights(z, x, m, phs, pol, K);

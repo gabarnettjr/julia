@@ -1,7 +1,6 @@
 using NearestNeighbors
 using SparseArrays
 using LinearAlgebra
-using Plots
 
 ###########################################################################
 #=
@@ -16,7 +15,7 @@ phi_y(x, y, phs) = phs .* y .* sqrt.(x .^ 2 + y .^ 2) .^ (phs - 2)
 
 function phiHV(x, y, phs, K)
     z = range(phs - 2*(K-1), step = 2, stop = phs)
-    return prod(z .^ 2) .* sqrt.(x .^ 2 + y .^ 2) .^ (phs - 2*K);
+    return prod(z .^ 2) .* sqrt.(x .^ 2 + y .^ 2) .^ (phs - 2*K)
 end
 
 ###########################################################################
@@ -157,33 +156,33 @@ end
 
 function test_getWeights(m, phs, pol, K)
 
-    alp = 1.;
+    alp = 1.
 
-    # x1 = alp .* [-5 -3 -1 1 3 5];
-    # x2 = alp .* [-5 -3 -1 1 3 5];
-    # z = alp .* [-0.22987; 0.159];
+    # x1 = alp .* [-5 -3 -1 1 3 5]
+    # x2 = alp .* [-5 -3 -1 1 3 5]
+    # z = alp .* [-0.22987; 0.159]
 
-    x1 = alp .* [-2. -1. 0. 1. 2.];
-    x2 = alp .* [-2. -1. 0. 1. 2.];
-    z = alp .* [0.234; -0.764];
+    x1 = alp .* [-2. -1. 0. 1. 2.]
+    x2 = alp .* [-2. -1. 0. 1. 2.]
+    z = alp .* [0.234; -0.764]
 
-    X = repeat(x1, length(x2), 1);
-    Y = repeat(x2', 1, length(x1));
-    x = vcat(X[:]', Y[:]');
+    X = repeat(x1, length(x2), 1)
+    Y = repeat(x2', 1, length(x1))
+    x = vcat(X[:]', Y[:]')
 
-    w = getWeights(z, x, m, phs, pol, K);
+    w = getWeights(z, x, m, phs, pol, K)
 
-    # f(x, y) = 1. .* ones(size(x));
-    # f_x(x, y) = 0. .* ones(size(x));
-    # f_y(x, y) = 0. * ones(size(x));
+    # f(x, y) = 1. .* ones(size(x))
+    # f_x(x, y) = 0. .* ones(size(x))
+    # f_y(x, y) = 0. * ones(size(x))
 
-    f(x, y) = x .* y;
-    f_x(x, y) = y;
-    f_y(x, y) = x;
+    f(x, y) = x .* y
+    f_x(x, y) = y
+    f_y(x, y) = x
 
-    # f(x, y) = x .^ 2 + y .^ 2;
-    # f_x(x, y) = 2. .* x;
-    # f_y(x, y) = 2. .* y;
+    # f(x, y) = x .^ 2 + y .^ 2
+    # f_x(x, y) = 2. .* x
+    # f_y(x, y) = 2. .* y
 
     println()
     println(dot(w, f(x[1,:], x[2,:])) - f_y(z[1], z[2]))
@@ -298,7 +297,7 @@ function test_getDM()
     approx = W * f(x[1,:], x[2,:])
     approx = reshape(approx, M, N)
 
-    surface(xx, yy, approx-f_x(X,Y))
+    println(maximum(abs(approx - f_x(X,Y))))
 
 end
 

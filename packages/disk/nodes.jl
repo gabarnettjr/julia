@@ -9,7 +9,7 @@ Distribute nodes somewhat uniformly on the unit disk by starting in
 the middle and working your way out in layers.
 """
 
-function radial(layers; n=6)
+function makeRadialNodes(layers; n=6)
 
     h = 1 / (layers - 1)
 
@@ -21,8 +21,12 @@ function radial(layers; n=6)
         k = k + n
         th = range(0, stop=2*pi, length=k+1)
         th = th[1:end-1]
-        p = vcat(p, i * h * hcat(cos.(th),sin.(th)))
+        p = vcat(p, i * h * hcat(cos.(th), sin.(th)))
     end
+
+    io = open("layers.txt", "w")
+    writedlm(io, layers, ' ')
+    close(io)
 
     io = open("nPts.txt", "w")
     writedlm(io, size(p,1), ' ')

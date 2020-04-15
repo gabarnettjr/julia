@@ -178,15 +178,15 @@ function speedtest_getWeights()
     function myTimer(N, Z)
         @time begin
             for i in 1:N
-                w = getWeights(z = Z[i]);
+                w = getWeights(z = Z[i])
             end
         end
     end
 
     for n in 0:16
-        N = 2^n;
-        Z = -3 .+ 6*rand(N);
-        myTimer(N, Z);
+        N = 2^n
+        Z = -3 .+ 6*rand(N)
+        myTimer(N, Z)
     end
 
 end

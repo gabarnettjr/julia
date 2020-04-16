@@ -4,7 +4,7 @@ include("../phs2.jl")
 
 #####################################################################
 """
-    getAllDMs(c, nodes, ii, phs, pol, stc, K, a)
+    getAllDMs(c, nodes, phs, pol, stc, K, a)
 
 # Description
     You put in some parameters and this function gives back all of
@@ -14,7 +14,6 @@ include("../phs2.jl")
 # Input
     c    : wave speed
     nodes: all of the nodes
-    ii   : index of interior nodes
     phs  : polyharmonic spline exponent
     pol  : highest degree of polynomial to include in the basis
     stc  : stencil size
@@ -26,13 +25,13 @@ include("../phs2.jl")
     Wy  : sparse differentiation matrix for d/dy
     Whv : sparse differentiation matrix for hyperviscosity operator
 """
-function getAllDMs(c, nodes, ii, phs, pol, stc, K, a)
+function getAllDMs(c, nodes, phs, pol, stc, K, a)
 
-    Wx = getDM(nodes[:,ii], nodes, [1 0], phs, pol, stc, K)
+    Wx = getDM(nodes, nodes, [1 0], phs, pol, stc, K)
 
-    Wy = getDM(nodes[:,ii], nodes, [0 1], phs, pol, stc, K)
+    Wy = getDM(nodes, nodes, [0 1], phs, pol, stc, K)
 
-    Whv = getDM(nodes[:,ii], nodes, [-1 -1], phs, pol, stc, K)
+    Whv = getDM(nodes, nodes, [-1 -1], phs, pol, stc, K)
 
     return c*Wx, c*Wy, a*Whv
 
@@ -47,7 +46,7 @@ function initialCondition!(x, y, U)
     y0 = -.2
 
     # Initial condition for rho
-    U[:,1] = exp.(-5*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
+    U[:,1] = exp.(-10*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
 
     # Note that the other variables, u and v, are initiated as zero.
 
@@ -57,13 +56,15 @@ end
 
 #####################################################################
 
-function ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, ii)
+function ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb)
     
-    dUdt[ii,1] = cWx * U[:,2] .+ cWy * U[:,3] .+ aWhv * U[:,1]
+    dUdt[:,1] = cWx * U[:,2] .+ cWy * U[:,3] .+ aWhv * U[:,1]
 
-    dUdt[ii,2] = cWx * U[:,1] .+ aWhv * U[:,2]
+    dUdt[bb,1] .= 0.
 
-    dUdt[ii,3] = cWy * U[:,1] .+ aWhv * U[:,3]
+    dUdt[:,2] = cWx * U[:,1] .+ aWhv * U[:,2]
+
+    dUdt[:,3] = cWy * U[:,1] .+ aWhv * U[:,3]
 
     return dUdt
 

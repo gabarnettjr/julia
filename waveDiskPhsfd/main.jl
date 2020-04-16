@@ -30,7 +30,7 @@ phs = 5
 pol = 3
 
 # Stencil size
-stc = 37
+stc = 19
 
 # Hyperviscosity exponent
 K = 2
@@ -39,7 +39,7 @@ K = 2
 c = 1.
 
 # Final time
-tf = 10
+tf = 3
 
 #####################################################################
 
@@ -55,9 +55,9 @@ else
 end
 
 # Index of the interior nodes
-ii = abs.(x .^ 2 .+ y .^ 2) .< (1 - 1e-6)
+bb = abs.(x .^ 2 .+ y .^ 2) .> (1 - 1e-6)
 
-cWx, cWy, aWhv = getAllDMs(c, hcat(x,y)', ii, phs, pol, stc, K, a)
+cWx, cWy, aWhv = getAllDMs(c, hcat(x,y)', phs, pol, stc, K, a)
 
 #####################################################################
 
@@ -81,9 +81,9 @@ end
 
 function odefun!(t, U, dUdt)
 
-    global cWx, cWy, aWhv, ii
+    global cWx, cWy, aWhv, bb
 
-    dUdt = ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, ii)
+    dUdt = ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb)
 
     return dUdt
 
@@ -121,20 +121,20 @@ end
 
 # The main time-stepping loop
 
-numSaves = 0
+numsaves = 0
 
 for i in 1 : Int(tf/dt)+1
 
-    global rk!, odefun!, rkstages, U, t, dt, q1, q2, q3, q4, numSaves
+    global rk!, odefun!, rkstages, U, t, dt, q1, q2, q3, q4, numsaves
 
-    if mod(i-1, (layers-1)) == 0
+    if mod(i-1, Int((layers-1)/4)) == 0
         @printf("i = %.0f,  t = %.5f\n", i, t[i])
         @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
                 maximum(U[:,1]), maximum(U[:,2]), maximum(U[:,3]))
         @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
                 minimum(U[:,1]), minimum(U[:,2]), minimum(U[:,3]))
-        numSaves = numSaves + 1
-        io = open(@sprintf("./results/rho_%04d.txt",numSaves), "w")
+        numsaves = numsaves + 1
+        io = open(@sprintf("./results/rho_%04d.txt",numsaves), "w")
         writedlm(io, U[:,1], ' ')
         close(io)
     end
@@ -149,6 +149,29 @@ for i in 1 : Int(tf/dt)+1
 end
 
 #####################################################################
+
+# Save things that will be needed in the python plotting script.
+# Later on there might be more added to this list, so that all of
+# the important details will be known by the python script.
+
+io = open("./results/npts.txt", "w")
+writedlm(io, length(x), ' ')
+close(io)
+
+io = open("./results/x.txt", "w")
+writedlm(io, x, ' ')
+close(io)
+
+io = open("./results/y.txt", "w")
+writedlm(io, y, ' ')
+close(io)
+
+io = open("./results/numsaves.txt", "w")
+writedlm(io, numsaves, ' ')
+close(io)
+
+#####################################################################
+
 
 
 

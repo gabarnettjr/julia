@@ -42,13 +42,13 @@ end
 function initialCondition!(x, y, U)
 
     # The initial center of the Gaussian bell function
-    x0 = .1
-    y0 = -.2
+    x0 = 0.1
+    y0 = 0.2
 
     # Initial condition for rho
     U[:,1] = exp.(-10*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
 
-    # Note that the other variables, u and v, are initiated as zero.
+    # Note that u and v are initialized to zero.
 
     return U
 
@@ -62,9 +62,9 @@ function ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb)
 
     dUdt[bb,1] .= 0.
 
-    dUdt[:,2] = cWx * U[:,1] .+ aWhv * U[:,2]
+    dUdt[:,2] = cWx * U[:,1]
 
-    dUdt[:,3] = cWy * U[:,1] .+ aWhv * U[:,3]
+    dUdt[:,3] = cWy * U[:,1]
 
     return dUdt
 

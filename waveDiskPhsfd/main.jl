@@ -1,4 +1,3 @@
-#####################################################################
 
 using Printf
 
@@ -18,7 +17,7 @@ include("../packages/rk.jl")
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk
-layers = 65
+layers = 33
 
 # Delta t
 dt = 1/2/c * 1/(layers - 1)
@@ -39,9 +38,13 @@ stc = 19
 K = 2
 
 # Final time
-tf = 50
+tf = 30
 
 #####################################################################
+
+# Remove old files and remake the results directory
+rm("results", recursive = true)
+mkdir("results")
 
 # Array of all times
 t = range(0, stop=tf, step=dt)
@@ -126,24 +129,37 @@ end
 
 # The main time-stepping loop
 
-nsaves = 0
+frame = 0
 
 for i in 1 : Int(tf/dt)+1
 
     # Things needed from outside the scope of the for loop
-    global rk!, odefun!, rkstages, U, t, dt, q1, q2, q3, q4, nsaves
+    global rk!, odefun!, rkstages, U, t, dt, q1, q2, q3, q4, frame
 
     # Every once in a while, print some info and save some things
+
     if mod(i-1, Int((layers-1)/4)) == 0
+
         @printf("i = %.0f,  t = %.5f\n", i, t[i])
         @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
                 maximum(U[:,1]), maximum(U[:,2]), maximum(U[:,3]))
         @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
                 minimum(U[:,1]), minimum(U[:,2]), minimum(U[:,3]))
-        nsaves = nsaves + 1
-        io = open(@sprintf("./results/rho_%04d.txt",nsaves), "w")
+
+        io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
         writedlm(io, U[:,1], ' ')
         close(io)
+
+        io = open(@sprintf("./results/u_%04d.txt",frame), "w")
+        writedlm(io, U[:,2], ' ')
+        close(io)
+
+        io = open(@sprintf("./results/v_%04d.txt",frame), "w")
+        writedlm(io, U[:,3], ' ')
+        close(io)
+
+        frame = frame + 1
+
     end
 
     # Update the array U to the next time level
@@ -163,20 +179,12 @@ end
 # Later on there might be more added to this list, so that all of
 # the important details will be known to python.
 
-io = open("./results/npts.txt", "w")
-writedlm(io, length(x), ' ')
-close(io)
-
 io = open("./results/x.txt", "w")
 writedlm(io, x, ' ')
 close(io)
 
 io = open("./results/y.txt", "w")
 writedlm(io, y, ' ')
-close(io)
-
-io = open("./results/nsaves.txt", "w")
-writedlm(io, nsaves, ' ')
 close(io)
 
 #####################################################################

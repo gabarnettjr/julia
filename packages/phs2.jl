@@ -134,6 +134,12 @@ function getWeights(z, x, m, phs, pol, K)
             else
                 error("Need phs to be larger to approximate this derivative.")
             end
+            if (K == 1) & (pol >= 2)
+                    b[ell+4 : ell+6] = [2 0 2]
+            end
+            if (K == 2) & (pol >= 4)
+                b[ell+11 : ell+15] = [24 0 4 0 24]
+            end
         else
             error("interpolation, first derivatives, or HV only please.")
         end

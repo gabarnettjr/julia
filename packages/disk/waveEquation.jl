@@ -56,7 +56,7 @@ end
 
 #####################################################################
 
-function ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb)
+function ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb, ii)
     
     dUdt[:,1] = cWx * U[:,2] .+ cWy * U[:,3] .+ aWhv * U[:,1]
 
@@ -65,6 +65,15 @@ function ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb)
     dUdt[:,2] = cWx * U[:,1]
 
     dUdt[:,3] = cWy * U[:,1]
+    
+    # dUdt[ii,1] = cWx[ii,:] * U[:,2] .+ cWy[ii,:] * U[:,3]
+    #     .+ aWhv[ii,ii] * U[ii,1]
+
+    # dUdt[bb,1] .= 0.
+
+    # dUdt[:,2] = cWx[:,ii] * U[ii,1]
+
+    # dUdt[:,3] = cWy[:,ii] * U[ii,1]
 
     return dUdt
 

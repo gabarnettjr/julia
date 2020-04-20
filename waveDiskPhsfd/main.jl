@@ -1,5 +1,6 @@
 
 using Printf
+using LinearAlgebra
 
 #####################################################################
 
@@ -13,14 +14,17 @@ include("../packages/rk.jl")
 
 # USER INPUT
 
+# Switch to decide whether to plot the eigenvalues of the matrix:
+eigenvalues = false
+
 # Wave speed
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk
-layers = 33
+layers = 65
 
 # Delta t
-dt = 1/2/c * 1/(layers - 1)
+dt = 1/4/c * 1/(layers - 1)
 
 # Runge-Kutta stages
 rkstages = 3
@@ -29,7 +33,7 @@ rkstages = 3
 phs = 5
 
 # Highest degree of polynomial to include in the basis
-pol = 3
+pol = 2
 
 # Stencil size
 stc = 19
@@ -38,7 +42,7 @@ stc = 19
 K = 2
 
 # Final time
-tf = 30
+tf = 100
 
 #####################################################################
 
@@ -54,8 +58,9 @@ x, y = makeRadialNodes(layers)
 
 # Set the hyperviscosity coefficient
 if K == 2
-    # a = 0
     a = -2^(-7) * c * 1 / (layers - 1) ^ (2*K-1)
+elseif K == 3
+    a = 2^(-10) * c * 1 / (layers - 1) ^ (2*K-1)
 else
     error("Still need to implement other cases.")
 end
@@ -63,8 +68,36 @@ end
 # Index of the boundary nodes
 bb = abs.(x .^ 2 .+ y .^ 2) .> (1 - 1e-6)
 
+# Index of the interior nodes
+ii = abs.(x .^ 2 .+ y .^ 2) .< (1 - 1e-6)
+
 # Get all of the DMs that will be needed for the wave equation
 cWx, cWy, aWhv = getAllDMs(c, hcat(x,y)', phs, pol, stc, K, a)
+
+#####################################################################
+
+# Construct the matrix that would apply the entier ODE function
+# in a single matrix-vector multiply, and then get its eigenvalues
+
+if eigenvalues
+
+    null = zeros(length(x), length(x))
+
+    A = hcat(Matrix(aWhv[ii,ii]), Matrix(cWx[ii,:]), Matrix(cWy[ii,:]))
+    A = vcat(A, hcat(Matrix(cWx[:,ii]), null, null))
+    A = vcat(A, hcat(Matrix(cWy[:,ii]), null, null))
+
+    eigenvalues = eigvals(A)
+
+    io = open("./results/e_real.txt", "w")
+    writedlm(io, real(eigenvalues), ' ')
+    close(io)
+
+    io = open("./results/e_imag.txt", "w")
+    writedlm(io, imag(eigenvalues), ' ')
+    close(io)
+
+end
 
 #####################################################################
 
@@ -89,9 +122,9 @@ end
 function odefun!(t, U, dUdt)
 
     # Things that are needed from outside the scope of the function
-    global cWx, cWy, aWhv, bb
+    global cWx, cWy, aWhv, bb, ii
 
-    dUdt = ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb)
+    dUdt = ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb, ii)
 
     return dUdt
 
@@ -138,7 +171,7 @@ for i in 1 : Int(tf/dt)+1
 
     # Every once in a while, print some info and save some things
 
-    if mod(i-1, Int((layers-1)/4)) == 0
+    if mod(i-1, Int((layers-1)/2)) == 0
 
         @printf("i = %.0f,  t = %.5f\n", i, t[i])
         @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 

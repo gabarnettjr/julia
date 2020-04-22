@@ -15,13 +15,19 @@ include("../packages/rk.jl")
 # USER INPUT
 
 # Switch to decide whether to plot the eigenvalues of the matrix:
-eigenvalues = false
+eigenvalues = true
+
+# Switch to use alternate ODE function
+useAlternateODEfunction = true
 
 # Wave speed
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk
-layers = 65
+layers = 17
+
+# Set how much the interior nodes will be perturbed
+ptb = .30
 
 # Delta t
 dt = 1/4/c * 1/(layers - 1)
@@ -42,7 +48,7 @@ stc = 19
 K = 2
 
 # Final time
-tf = 100
+tf = 10
 
 #####################################################################
 
@@ -71,6 +77,18 @@ bb = abs.(x .^ 2 .+ y .^ 2) .> (1 - 1e-6)
 # Index of the interior nodes
 ii = abs.(x .^ 2 .+ y .^ 2) .< (1 - 1e-6)
 
+# Perturb the interior nodes by percentage ptb of node spacing
+x, y = perturbInterior!(x, y, layers, ptb, ii)
+
+# Number of nodes total
+n = length(x)
+
+# Number of interior nodes
+ni = length(x[ii])
+
+# Number of boundary nodes
+nb = length(x[bb])
+
 # Get all of the DMs that will be needed for the wave equation
 cWx, cWy, aWhv = getAllDMs(c, hcat(x,y)', phs, pol, stc, K, a)
 
@@ -79,15 +97,15 @@ cWx, cWy, aWhv = getAllDMs(c, hcat(x,y)', phs, pol, stc, K, a)
 # Construct the matrix that would apply the entier ODE function
 # in a single matrix-vector multiply, and then get its eigenvalues
 
+null = zeros(length(x), length(x))
+
+A = hcat(aWhv[ii,ii], cWx[ii,:], cWy[ii,:])
+A = vcat(A, hcat(cWx[:,ii], null, null))
+A = vcat(A, hcat(cWy[:,ii], null, null))
+
 if eigenvalues
 
-    null = zeros(length(x), length(x))
-
-    A = hcat(Matrix(aWhv[ii,ii]), Matrix(cWx[ii,:]), Matrix(cWy[ii,:]))
-    A = vcat(A, hcat(Matrix(cWx[:,ii]), null, null))
-    A = vcat(A, hcat(Matrix(cWy[:,ii]), null, null))
-
-    eigenvalues = eigvals(A)
+    eigenvalues = eigvals(Matrix(A))
 
     io = open("./results/e_real.txt", "w")
     writedlm(io, real(eigenvalues), ' ')
@@ -99,11 +117,20 @@ if eigenvalues
 
 end
 
+A = sparse(A)
+
 #####################################################################
 
 # Initialize main solution array U
-U = zeros(length(x), 3)
-U = initialCondition!(x, y, U)
+x0 = 0.1
+y0 = 0.2
+if useAlternateODEfunction
+    U = zeros(ni+n+n)
+    U[1:ni] = exp.(-10*((x[ii] .- x0) .^ 2 .+ (y[ii] .- y0) .^ 2))
+else
+    U = zeros(length(x), 3)
+    U[:,1] = exp.(-10*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
+end
 
 # Initialize dummy arrays to be used in Runge-Kutta
 q1 = zeros(size(U))                              #needed in all cases
@@ -119,14 +146,31 @@ end
 
 # Define an ODE function which can be passed to rk
 
-function odefun!(t, U, dUdt)
+if useAlternateODEfunction
 
-    # Things that are needed from outside the scope of the function
-    global cWx, cWy, aWhv, bb, ii
+    function odefun!(t, U, dUdt)
+        
+        # Things that are needed from outside the scope of the function
+        global A
 
-    dUdt = ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb, ii)
+        dUdt = ODEfunction2!(t, U, dUdt, A)
 
-    return dUdt
+        return dUdt
+
+    end
+
+else
+
+    function odefun!(t, U, dUdt)
+    
+        # Things that are needed from outside the scope of the function
+        global cWx, cWy, aWhv, bb, ii
+    
+        dUdt = ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb, ii)
+    
+        return dUdt
+    
+    end
 
 end
 
@@ -164,7 +208,7 @@ end
 
 frame = 0
 
-for i in 1 : Int(tf/dt)+1
+for i in 1 : Int(tf/dt) + 1
 
     # Things needed from outside the scope of the for loop
     global rk!, odefun!, rkstages, U, t, dt, q1, q2, q3, q4, frame
@@ -173,23 +217,49 @@ for i in 1 : Int(tf/dt)+1
 
     if mod(i-1, Int((layers-1)/2)) == 0
 
-        @printf("i = %.0f,  t = %.5f\n", i, t[i])
-        @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
-                maximum(U[:,1]), maximum(U[:,2]), maximum(U[:,3]))
-        @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
-                minimum(U[:,1]), minimum(U[:,2]), minimum(U[:,3]))
+        if useAlternateODEfunction
 
-        io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
-        writedlm(io, U[:,1], ' ')
-        close(io)
+            @printf("i = %.0f,  t = %.5f\n", i, t[i])
+            @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
+                    maximum(U[1:ni]), maximum(U[ni+1:ni+n]),
+                    maximum(U[ni+n+1:ni+2*n]))
+            @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
+                    minimum(U[1:ni]), minimum(U[ni+1:ni+n]),
+                    minimum(U[ni+n+1:ni+2*n]))
 
-        io = open(@sprintf("./results/u_%04d.txt",frame), "w")
-        writedlm(io, U[:,2], ' ')
-        close(io)
+            io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
+            writedlm(io, vcat(U[1:ni],zeros(nb)), ' ')
+            close(io)
 
-        io = open(@sprintf("./results/v_%04d.txt",frame), "w")
-        writedlm(io, U[:,3], ' ')
-        close(io)
+            io = open(@sprintf("./results/u_%04d.txt",frame), "w")
+            writedlm(io, U[ni+1:ni+n], ' ')
+            close(io)
+
+            io = open(@sprintf("./results/v_%04d.txt",frame), "w")
+            writedlm(io, U[ni+n+1:ni+2*n], ' ')
+            close(io)
+
+        else
+
+            @printf("i = %.0f,  t = %.5f\n", i, t[i])
+            @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
+                    maximum(U[:,1]), maximum(U[:,2]), maximum(U[:,3]))
+            @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
+                    minimum(U[:,1]), minimum(U[:,2]), minimum(U[:,3]))
+
+            io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
+            writedlm(io, U[:,1], ' ')
+            close(io)
+
+            io = open(@sprintf("./results/u_%04d.txt",frame), "w")
+            writedlm(io, U[:,2], ' ')
+            close(io)
+
+            io = open(@sprintf("./results/v_%04d.txt",frame), "w")
+            writedlm(io, U[:,3], ' ')
+            close(io)
+
+        end
 
         frame = frame + 1
 

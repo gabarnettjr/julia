@@ -45,3 +45,15 @@ function makeRadialNodes(layers; n=6)
 end
 
 #####################################################################
+
+function perturbInterior!(x, y, layers, ptb, ii)
+
+    r = -1 .+ 2 * rand(length(x[ii]), 2)
+
+    x[ii] = x[ii] .+ 1/(layers-1) * ptb * r[:,1]
+    y[ii] = y[ii] .+ 1/(layers-1) * ptb * r[:,2]
+
+    return x, y 
+end
+
+#####################################################################

@@ -15,7 +15,7 @@ include("../packages/rk.jl")
 # USER INPUT
 
 # Switch to decide whether to plot the eigenvalues of the matrix:
-eigenvalues = true
+eigenvalues = false
 
 # Switch to use alternate ODE function
 useAlternateODEfunction = true
@@ -24,10 +24,10 @@ useAlternateODEfunction = true
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk
-layers = 17
+layers = 65
 
 # Set how much the interior nodes will be perturbed
-ptb = .30
+ptb = .35
 
 # Delta t
 dt = 1/4/c * 1/(layers - 1)
@@ -97,7 +97,7 @@ cWx, cWy, aWhv = getAllDMs(c, hcat(x,y)', phs, pol, stc, K, a)
 # Construct the matrix that would apply the entier ODE function
 # in a single matrix-vector multiply, and then get its eigenvalues
 
-null = zeros(length(x), length(x))
+null = sparse(zeros(length(x), length(x)))
 
 A = hcat(aWhv[ii,ii], cWx[ii,:], cWy[ii,:])
 A = vcat(A, hcat(cWx[:,ii], null, null))
@@ -126,17 +126,17 @@ x0 = 0.1
 y0 = 0.2
 if useAlternateODEfunction
     U = zeros(ni+n+n)
-    U[1:ni] = exp.(-10*((x[ii] .- x0) .^ 2 .+ (y[ii] .- y0) .^ 2))
+    U[1:ni] = exp.(-15*((x[ii] .- x0) .^ 2 .+ (y[ii] .- y0) .^ 2))
 else
     U = zeros(length(x), 3)
-    U[:,1] = exp.(-10*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
+    U[:,1] = exp.(-15*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
 end
 
 # Initialize dummy arrays to be used in Runge-Kutta
 q1 = zeros(size(U))                              #needed in all cases
-if rkstages >= 3
-    q2 = zeros(size(U))                       #needed for rk3 and rk4
-end
+q2 = zeros(size(U))                           #needed for rk3 and rk4
+q3 = []
+q4 = []
 if rkstages == 4
     q3 = zeros(size(U))                               #needed for rk4
     q4 = zeros(size(U))                               #needed for rk4
@@ -148,12 +148,9 @@ end
 
 if useAlternateODEfunction
 
-    function odefun!(t, U, dUdt)
-        
-        # Things that are needed from outside the scope of the function
-        global A
+    function odefun!(t, U, A, dUdt)
 
-        dUdt = ODEfunction2!(t, U, dUdt, A)
+        dUdt = ODEfunction2!(t, U, A, dUdt)
 
         return dUdt
 
@@ -161,7 +158,7 @@ if useAlternateODEfunction
 
 else
 
-    function odefun!(t, U, dUdt)
+    function odefun!(t, U, A, dUdt)
     
         # Things that are needed from outside the scope of the function
         global cWx, cWy, aWhv, bb, ii
@@ -178,27 +175,21 @@ end
 
 # Define the Runge-Kutta function based on the number of stages
 
-if rkstages == 2
+if rkstages == 3
 
-    function rk!(t, U, odefun!, dt)
-        return rk2!(t, U, odefun!, dt, q1)
-    end
-
-elseif rkstages == 3
-
-    function rk!(t, U, odefun!, dt)
-        return rk3!(t, U, odefun!, dt, q1, q2)
+    function rk!(t, U, odefun!, dt, A, q1, q2, q3, q4)
+        return rk3!(t, U, odefun!, dt, A, q1, q2, q3, q4)
     end
 
 elseif rkstages == 4
 
-    function rk!(t, U, odefun!, dt)
+    function rk!(t, U, odefun!, dt, q1, q2, q3, q4)
         return rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
     end
 
 else
 
-    error("rkstages should be 2, 3, or 4 please.")
+    error("rkstages should be 3 or 4 please.")
 
 end
 
@@ -208,73 +199,88 @@ end
 
 frame = 0
 
-for i in 1 : Int(tf/dt) + 1
+function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
+                              q1, q2, q3, q4, frame)
 
-    # Things needed from outside the scope of the for loop
-    global rk!, odefun!, rkstages, U, t, dt, q1, q2, q3, q4, frame
-
-    # Every once in a while, print some info and save some things
-
-    if mod(i-1, Int((layers-1)/2)) == 0
-
-        if useAlternateODEfunction
-
-            @printf("i = %.0f,  t = %.5f\n", i, t[i])
-            @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
-                    maximum(U[1:ni]), maximum(U[ni+1:ni+n]),
-                    maximum(U[ni+n+1:ni+2*n]))
-            @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
-                    minimum(U[1:ni]), minimum(U[ni+1:ni+n]),
-                    minimum(U[ni+n+1:ni+2*n]))
-
-            io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
-            writedlm(io, vcat(U[1:ni],zeros(nb)), ' ')
-            close(io)
-
-            io = open(@sprintf("./results/u_%04d.txt",frame), "w")
-            writedlm(io, U[ni+1:ni+n], ' ')
-            close(io)
-
-            io = open(@sprintf("./results/v_%04d.txt",frame), "w")
-            writedlm(io, U[ni+n+1:ni+2*n], ' ')
-            close(io)
-
-        else
-
-            @printf("i = %.0f,  t = %.5f\n", i, t[i])
-            @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
-                    maximum(U[:,1]), maximum(U[:,2]), maximum(U[:,3]))
-            @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
-                    minimum(U[:,1]), minimum(U[:,2]), minimum(U[:,3]))
-
-            io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
-            writedlm(io, U[:,1], ' ')
-            close(io)
-
-            io = open(@sprintf("./results/u_%04d.txt",frame), "w")
-            writedlm(io, U[:,2], ' ')
-            close(io)
-
-            io = open(@sprintf("./results/v_%04d.txt",frame), "w")
-            writedlm(io, U[:,3], ' ')
-            close(io)
-
+    for i in 1 : Int(tf/dt) + 1
+    
+        # Things needed from outside the scope of the for loop
+        # global rk!, odefun!, rkstages, U, t, dt, q1, q2, q3, q4, frame
+    
+        # Every once in a while, print some info and save some things
+    
+        if mod(i-1, Int((layers-1)/2)) == 0
+    
+            if useAlternateODEfunction
+    
+                @printf("i = %.0f,  t = %.5f\n", i, t[i])
+                @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
+                        maximum(U[1:ni]), maximum(U[ni+1:ni+n]),
+                        maximum(U[ni+n+1:ni+2*n]))
+                @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
+                        minimum(U[1:ni]), minimum(U[ni+1:ni+n]),
+                        minimum(U[ni+n+1:ni+2*n]))
+    
+                io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
+                writedlm(io, vcat(U[1:ni],zeros(nb)), ' ')
+                close(io)
+    
+                io = open(@sprintf("./results/u_%04d.txt",frame), "w")
+                writedlm(io, U[ni+1:ni+n], ' ')
+                close(io)
+    
+                io = open(@sprintf("./results/v_%04d.txt",frame), "w")
+                writedlm(io, U[ni+n+1:ni+2*n], ' ')
+                close(io)
+    
+            else
+    
+                @printf("i = %.0f,  t = %.5f\n", i, t[i])
+                @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
+                        maximum(U[:,1]), maximum(U[:,2]), maximum(U[:,3]))
+                @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
+                        minimum(U[:,1]), minimum(U[:,2]), minimum(U[:,3]))
+    
+                io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
+                writedlm(io, U[:,1], ' ')
+                close(io)
+    
+                io = open(@sprintf("./results/u_%04d.txt",frame), "w")
+                writedlm(io, U[:,2], ' ')
+                close(io)
+    
+                io = open(@sprintf("./results/v_%04d.txt",frame), "w")
+                writedlm(io, U[:,3], ' ')
+                close(io)
+    
+            end
+    
+            frame = frame + 1
+    
         end
-
-        frame = frame + 1
-
-    end
-
-    # Update the array U to the next time level
-    U = rk!(t[i], U, odefun!, dt)
-
-    # Stop running if the numerical solution blows up
-    if maximum(abs.(U)) > 20
-        println("It blew up.")
-        break
+    
+        if mod(i-1, Int((layers-1)/2)) == 0
+            @time begin
+                # Update the array U to the next time level
+                U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
+            end
+        else
+            # Update the array U to the next time level
+            U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
+        end
+    
+        # Stop running if the numerical solution blows up
+        if maximum(abs.(U)) > 20
+            println("It blew up.")
+            break
+        end
+    
     end
 
 end
+
+mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
+                              q1, q2, q3, q4, frame)
 
 #####################################################################
 

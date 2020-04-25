@@ -1,9 +1,4 @@
 #####################################################################
-
-using DelimitedFiles
-
-#####################################################################
-
 """
 Distribute nodes somewhat uniformly on the unit disk by starting in
 the middle and working your way out in layers.
@@ -23,22 +18,6 @@ function makeRadialNodes(layers; n=6)
         th = th[1:end-1]
         p = vcat(p, i * h * hcat(cos.(th), sin.(th)))
     end
-
-    # io = open("layers.txt", "w")
-    # writedlm(io, layers, ' ')
-    # close(io)
-
-    # io = open("nPts.txt", "w")
-    # writedlm(io, size(p,1), ' ')
-    # close(io)
-
-    # io = open("x.txt", "w")
-    # writedlm(io, p[:,1], ' ')
-    # close(io)
-
-    # io = open("y.txt", "w")
-    # writedlm(io, p[:,2], ' ')
-    # close(io)
 
     return p[:,1], p[:,2]
 

@@ -1,6 +1,7 @@
 
 using Printf
 using LinearAlgebra
+using DelimitedFiles
 
 #####################################################################
 
@@ -24,7 +25,7 @@ useAlternateODEfunction = true
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk
-layers = 65
+layers = 129
 
 # Set how much the interior nodes will be perturbed
 ptb = .35
@@ -48,7 +49,7 @@ stc = 19
 K = 2
 
 # Final time
-tf = 10
+tf = 100
 
 #####################################################################
 
@@ -99,9 +100,9 @@ cWx, cWy, aWhv = getAllDMs(c, hcat(x,y)', phs, pol, stc, K, a)
 
 null = sparse(zeros(length(x), length(x)))
 
-A = hcat(aWhv[ii,ii], cWx[ii,:], cWy[ii,:])
-A = vcat(A, hcat(cWx[:,ii], null, null))
-A = vcat(A, hcat(cWy[:,ii], null, null))
+A = hcat(   aWhv[ii,ii],    cWx[ii,:], cWy[ii,:])
+A = vcat(A, hcat(cWx[:,ii], null,      null))
+A = vcat(A, hcat(cWy[:,ii], null,      null))
 
 if eigenvalues
 
@@ -117,8 +118,6 @@ if eigenvalues
 
 end
 
-A = sparse(A)
-
 #####################################################################
 
 # Initialize main solution array U
@@ -126,10 +125,10 @@ x0 = 0.1
 y0 = 0.2
 if useAlternateODEfunction
     U = zeros(ni+n+n)
-    U[1:ni] = exp.(-15*((x[ii] .- x0) .^ 2 .+ (y[ii] .- y0) .^ 2))
+    U[1:ni] = exp.(-20*((x[ii] .- x0) .^ 2 .+ (y[ii] .- y0) .^ 2))
 else
     U = zeros(length(x), 3)
-    U[:,1] = exp.(-15*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
+    U[:,1] = exp.(-20*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
 end
 
 # Initialize dummy arrays to be used in Runge-Kutta
@@ -204,9 +203,6 @@ function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
 
     for i in 1 : Int(tf/dt) + 1
     
-        # Things needed from outside the scope of the for loop
-        # global rk!, odefun!, rkstages, U, t, dt, q1, q2, q3, q4, frame
-    
         # Every once in a while, print some info and save some things
     
         if mod(i-1, Int((layers-1)/2)) == 0
@@ -259,18 +255,17 @@ function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
     
         end
     
+        # Update the array U to the next time level
         if mod(i-1, Int((layers-1)/2)) == 0
             @time begin
-                # Update the array U to the next time level
                 U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
             end
         else
-            # Update the array U to the next time level
             U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
         end
     
         # Stop running if the numerical solution blows up
-        if maximum(abs.(U)) > 20
+        if maximum(abs.(U)) > 10
             println("It blew up.")
             break
         end

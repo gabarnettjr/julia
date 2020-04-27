@@ -93,6 +93,10 @@ function getWeights(z, x, m, phs, pol, K)
         P[:,20] = XY[1,:]      .* XY[2,:] .^ 4
         P[:,21] =                 XY[2,:] .^ 5
     end
+    if (pol > 5)
+        error("Please choose 0, 1, 2, 3, 4, or 5 for pol.  ",
+              "Higher degrees are not implemented.")
+    end
 
     # Fill in the polyharmonic spline portion of the matrix A:
     for i in 1:ell
@@ -145,8 +149,8 @@ function getWeights(z, x, m, phs, pol, K)
         end
     else
         error("Bad parameter values.  Please make sure that phs is an ",
-              "odd number, and that length(XY)>=nPol and phs>=2*max(mn)+1.",
-              "Also, it could be that the derivative you are requesting",
+              "odd number, and that length(XY)>=nPol and phs>=2*max(mn)+1.  ",
+              "Also, it could be that the derivative you are requesting ",
               "is not yet implemented.")
     end
 

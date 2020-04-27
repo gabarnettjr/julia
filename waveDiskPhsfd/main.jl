@@ -9,14 +9,14 @@ include("../packages/disk/nodes.jl")
 
 include("../packages/disk/waveEquation.jl")
 
-include("../packages/rk.jl")
+include("../packages/phs2.jl")
 
 #####################################################################
 
 # USER INPUT
 
 # Switch to decide whether to plot the eigenvalues of the matrix:
-eigenvalues = false
+eigenvalues = true
 
 # Switch to use alternate ODE function
 useAlternateODEfunction = true
@@ -25,7 +25,7 @@ useAlternateODEfunction = true
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk
-layers = 129
+layers = 17
 
 # Set how much the interior nodes will be perturbed
 ptb = .35
@@ -49,7 +49,7 @@ stc = 19
 K = 2
 
 # Final time
-tf = 100
+tf = 10
 
 #####################################################################
 
@@ -91,7 +91,9 @@ ni = length(x[ii])
 nb = length(x[bb])
 
 # Get all of the DMs that will be needed for the wave equation
-cWx, cWy, aWhv = getAllDMs(c, hcat(x,y)', phs, pol, stc, K, a)
+cWx = c * getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)
+cWy = c * getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0)
+aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
 
 #####################################################################
 

@@ -9,12 +9,12 @@ include("../packages/disk/nodes.jl")
 
 #####################################################################
 
-frq = 4
-n = 16000
+frq = 1
+n = 1000
 layers = 33
 phs = 5
 pol = 2
-stc = 16
+stc = 19
 del = .2
 
 #####################################################################
@@ -30,19 +30,18 @@ del = .2
 # x = -1-del/2 .+ (2+del) * x
 # y = -1-del/2 .+ (2+del) * y
 
-# # The random nodes where information is known
-# p = -1-del/2 .+ (2+del) * rand(n,2)
-# x = p[:,1]
-# y = p[:,2]
+# The random nodes where information is known
+p = -1-del/2 .+ (2+del) * rand(n,2)
+x = p[:,1]
+y = p[:,2]
 
-# The Cartesian nodes where information is known
-x = range(-1-del/2, stop=2+del, length=Int(round(sqrt(n))))
-y = copy(x)
-xx = repeat(x, 1, length(y))
-yy = repeat(y', length(x), 1)
-x = xx[:]
-y = yy[:]
-
+# # The Cartesian nodes where information is known
+# x = range(-1-del/2, stop=2+del, length=Int(round(sqrt(n))))
+# y = copy(x)
+# xx = repeat(x, 1, length(y))
+# yy = repeat(y', length(x), 1)
+# x = xx[:]
+# y = yy[:]
 
 # Only keep nodes inside a certain radius
 ii = sqrt.(x .^ 2 .+ y .^ 2) .< 1+del/2

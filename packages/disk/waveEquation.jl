@@ -1,41 +1,41 @@
 #####################################################################
 
-include("../phs2.jl")
+# include("../phs2.jl")
 
 #####################################################################
-"""
-    getAllDMs(c, nodes, phs, pol, stc, K, a)
-
-# Description
-    You put in some parameters and this function gives back all of
-    the differentiation matrices (DMs) you will need to solve the
-    2D acoustic wave equation on the unit disk.
-
-# Input
-    c    : wave speed
-    nodes: all of the nodes
-    phs  : polyharmonic spline exponent
-    pol  : highest degree of polynomial to include in the basis
-    stc  : stencil size
-    K    : hyperviscosity exponent
-    a    : hyperviscosity coefficient
-
-# Output
-    Wx  : sparse differentiation matrix for d/dx
-    Wy  : sparse differentiation matrix for d/dy
-    Whv : sparse differentiation matrix for hyperviscosity operator
-"""
-function getAllDMs(c, nodes, phs, pol, stc, K, a)
-
-    Wx = getDM(nodes, nodes, [1 0], phs, pol, stc, K)
-
-    Wy = getDM(nodes, nodes, [0 1], phs, pol, stc, K)
-
-    Whv = getDM(nodes, nodes, [-1 -1], phs, pol, stc, K)
-
-    return c*Wx, c*Wy, a*Whv
-
-end
+# """
+#     getAllDMs(c, nodes, phs, pol, stc, K, a)
+# 
+# # Description
+#     You put in some parameters and this function gives back all of
+#     the differentiation matrices (DMs) you will need to solve the
+#     2D acoustic wave equation on the unit disk.
+# 
+# # Input
+#     c    : wave speed
+#     nodes: all of the nodes
+#     phs  : polyharmonic spline exponent
+#     pol  : highest degree of polynomial to include in the basis
+#     stc  : stencil size
+#     K    : hyperviscosity exponent
+#     a    : hyperviscosity coefficient
+# 
+# # Output
+#     Wx  : sparse differentiation matrix for d/dx
+#     Wy  : sparse differentiation matrix for d/dy
+#     Whv : sparse differentiation matrix for hyperviscosity operator
+# """
+# function getAllDMs(c, nodes, phs, pol, stc, K, a)
+# 
+#     Wx = getDM(nodes, nodes, [1 0], phs, pol, stc, K)
+# 
+#     Wy = getDM(nodes, nodes, [0 1], phs, pol, stc, K)
+# 
+#     Whv = getDM(nodes, nodes, [-1 -1], phs, pol, stc, K)
+# 
+#     return c*Wx, c*Wy, a*Whv
+# 
+# end
 
 #####################################################################
 
@@ -93,11 +93,11 @@ end
 
 #####################################################################
 
-function rk3!(t, U, odefun, dt, A, q1, q2, q3, q4)
+function rk3!(t, U, odefun!, dt, A, q1, q2, q3, q4)
 
-    q1 = odefun(t,        U,           A, q1)
-    q2 = odefun(t+dt/3,   U+dt/3*q1,   A, q2)
-    q2 = odefun(t+2*dt/3, U+2*dt/3*q2, A, q2)
+    q1 = odefun!(t,        U,           A, q1)
+    q2 = odefun!(t+dt/3,   U+dt/3*q1,   A, q2)
+    q2 = odefun!(t+2*dt/3, U+2*dt/3*q2, A, q2)
 
     U = U + dt/4 * (q1 + 3*q2)
 
@@ -107,12 +107,12 @@ end
 
 #####################################################################
 
-function rk4!(t, U, odefun, dt, A, q1, q2, q3, q4)
+function rk4!(t, U, odefun!, dt, A, q1, q2, q3, q4)
 
-    q1 = odefun(t,      U,         A, q1)
-    q2 = odefun(t+dt/2, U+dt/2*q1, A, q2)
-    q3 = odefun(t+dt/2, U+dt/2*q2, A, q3)
-    q4 = odefun(t+dt,   U+dt*q3,   A, q4)
+    q1 = odefun!(t,      U,         A, q1)
+    q2 = odefun!(t+dt/2, U+dt/2*q1, A, q2)
+    q3 = odefun!(t+dt/2, U+dt/2*q2, A, q3)
+    q4 = odefun!(t+dt,   U+dt*q3,   A, q4)
 
     U = U + dt/6 * (q1 + 2*q2 + 2*q3 + q4)
 
@@ -121,10 +121,3 @@ function rk4!(t, U, odefun, dt, A, q1, q2, q3, q4)
 end
 
 #####################################################################
-
-
-
-
-
-
-

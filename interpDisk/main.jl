@@ -9,9 +9,9 @@ include("../packages/disk/nodes.jl")
 
 #####################################################################
 
-frq = 1
+frq = 3
 n = 1000
-layers = 33
+layers = 65
 phs = 5
 pol = 2
 stc = 19
@@ -52,7 +52,9 @@ y = y[ii]
 xe, ye = makeRadialNodes(layers)
 
 # The weights matrix for interpolating to the regular nodes
-W = getDM(hcat(xe,ye)', hcat(x,y)', [0 0], phs, pol, stc, 0)
+@time begin
+    W = getDM(hcat(xe,ye)', hcat(x,y)', [0 0], phs, pol, stc, 0)
+end
 
 # Test function
 f(x,y) = cos.(frq*pi*x) .* sin.(frq*pi*y)

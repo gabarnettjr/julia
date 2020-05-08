@@ -38,10 +38,11 @@ with open('./results/ye.txt') as f:
 
 # plot the nodes and save them
 fig = plt.figure(figsize = (12, 10))
-plt.plot(xe, ye, '.', x, y, '.')
+plt.plot(xe, ye, 'y.', x, y, 'k.')
 plt.axis('equal')
-plt.title('{0:0d} total nodes'.format(len(x)))
+plt.title('{0:0d} nodes, {1:0d} eval pts'.format(len(x), len(xe)))
 fig.savefig('./figures/nodes.png', bbox_inches = 'tight')
+plt.close()
 
 ###########################################################################
 
@@ -65,19 +66,22 @@ triang = mtri.Triangulation(xe, ye)
 # Contour plot of the approximation
 fig = plt.figure(figsize = (12, 10))
 ax = fig.add_subplot(111)
-cs = ax.tricontourf(triang, app, levels = clevels)
+cs = ax.tricontour(triang, app, levels = clevels)
 fig.colorbar(cs)
 plt.axis('equal')
 plt.axis([-1,1,-1,1])
 fig.savefig('./figures/app.png', bbox_inches = 'tight')
+plt.close()
 
 # Contour plot of the error
 fig = plt.figure(figsize = (12, 10))
 ax = fig.add_subplot(111)
 cs = ax.tricontourf(triang, app-exact, levels = 20)
+plt.plot(x, y, 'k.')
 fig.colorbar(cs)
 plt.axis('equal')
-plt.axis([-1,1,-1,1])
+# plt.axis([-1,1,-1,1])
 fig.savefig('./figures/diff.png', bbox_inches = 'tight')
+plt.close()
 
 ###########################################################################

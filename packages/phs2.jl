@@ -155,7 +155,7 @@ function getWeights(z, x, m, phs, pol, K)
     end
 
     #solve linear system for the weights
-    w = A \ b
+    w = (A \ b)
 
     #remove weights that will be multiplied by 0, and return the rest
     return w[1:ell]
@@ -273,7 +273,9 @@ function getDM(z, x, m, phs, pol, stc, K)
         w[:,i] = getWeights(z[:,i], x[:,idx[i]], m, phs, pol, K)
     end
 
-    return sparse(ii[:], jj[:], w[:], Lz, Lx)
+    w = sparse(ii[:], jj[:], w[:], Lz, Lx)
+
+    return w
 
 end
 

@@ -16,7 +16,7 @@ include("../packages/phs2.jl")
 # USER INPUT
 
 # Switch to decide whether to plot the eigenvalues of the matrix:
-eigenvalues = true
+eigenvalues = false
 
 # Switch to use alternate ODE function
 useAlternateODEfunction = true
@@ -25,7 +25,7 @@ useAlternateODEfunction = true
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk
-layers = 17
+layers = 65
 
 # Set how much the interior nodes will be perturbed
 ptb = .35
@@ -49,7 +49,7 @@ stc = 19
 K = 2
 
 # Final time
-tf = 10
+tf = 100
 
 #####################################################################
 
@@ -78,8 +78,8 @@ bb = abs.(x .^ 2 .+ y .^ 2) .> (1 - 1e-6)
 # Index of the interior nodes
 ii = abs.(x .^ 2 .+ y .^ 2) .< (1 - 1e-6)
 
-# Perturb the interior nodes by percentage ptb of node spacing
-x, y = perturbInterior!(x, y, layers, ptb, ii)
+# Perturb the nodes by percentage ptb of node spacing
+x, y = perturbNodes!(x, y, layers, ptb, bb)
 
 # Number of nodes total
 n = length(x)
@@ -258,13 +258,13 @@ function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
         end
     
         # Update the array U to the next time level
-        if mod(i-1, Int((layers-1)/2)) == 0
-            @time begin
-                U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
-            end
-        else
+        # if mod(i-1, Int((layers-1)/2)) == 0
+        #     @time begin
+        #         U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
+        #     end
+        # else
             U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
-        end
+        # end
     
         # Stop running if the numerical solution blows up
         if maximum(abs.(U)) > 10

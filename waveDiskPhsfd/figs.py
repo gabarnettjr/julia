@@ -10,7 +10,7 @@ import os
 # USER INPUT
 
 # Decide whether to plot the eigenvalues
-eigenvalues = True
+eigenvalues = False
 
 # If the user passes in an argument, assume it's the variable to plot
 if len(sys.argv) > 1:
@@ -59,6 +59,7 @@ fig = plt.figure(figsize = (12, 10))
 plt.plot(x, y, '.')
 plt.axis('equal')
 fig.savefig(outstr + 'nodes.png', bbox_inches = 'tight')
+plt.close()
 
 
 # Load the eigenvalues and plot them, if requested
@@ -75,6 +76,7 @@ if eigenvalues:
     plt.plot(e_real, e_imag, '.')
     plt.title('maxReal = {0:.10f}'.format(max(e_real)))
     fig.savefig(outstr + 'eigenvalues.png', bbox_inches = 'tight')
+    plt.close()
 
 # Get the triangular mesh for plotting the contours
 triang = mtri.Triangulation(x, y)

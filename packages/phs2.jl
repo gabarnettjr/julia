@@ -60,32 +60,32 @@ function getWeights(z, x, m, phs, pol, K)
     b = zeros(ell + nPol)
 
     # Fill in  the polynomial matrix
-    if (pol > -1)
+    if (pol >= 0)
         P[:,1] .= 1
     end
-    if (pol > 0)
+    if (pol >= 1)
         P[:,2]  = XY[1,:]
         P[:,3]  = XY[2,:]
     end
-    if (pol > 1)
+    if (pol >= 2)
         P[:,4]  = XY[1,:] .^ 2
         P[:,5]  = XY[1,:]      .* XY[2,:]
         P[:,6]  =                 XY[2,:] .^ 2
     end
-    if (pol > 2)
+    if (pol >= 3)
         P[:,7]  = XY[1,:] .^ 3
         P[:,8]  = XY[1,:] .^ 2 .* XY[2,:]
         P[:,9]  = XY[1,:]      .* XY[2,:] .^ 2
         P[:,10] =                 XY[2,:] .^ 3
     end
-    if (pol > 3)
+    if (pol >= 4)
         P[:,11] = XY[1,:] .^ 4
         P[:,12] = XY[1,:] .^ 3 .* XY[2,:]
         P[:,13] = XY[1,:] .^ 2 .* XY[2,:] .^ 2
         P[:,14] = XY[1,:]      .* XY[2,:] .^ 3
         P[:,15] =                 XY[2,:] .^ 4
     end
-    if (pol > 4)
+    if (pol >= 5)
         P[:,16] = XY[1,:] .^ 5
         P[:,17] = XY[1,:] .^ 4 .* XY[2,:]
         P[:,18] = XY[1,:] .^ 3 .* XY[2,:] .^ 2
@@ -93,7 +93,7 @@ function getWeights(z, x, m, phs, pol, K)
         P[:,20] = XY[1,:]      .* XY[2,:] .^ 4
         P[:,21] =                 XY[2,:] .^ 5
     end
-    if (pol > 5)
+    if (pol >= 6)
         error("Please choose 0, 1, 2, 3, 4, or 5 for pol.  ",
               "Higher degrees are not implemented.")
     end

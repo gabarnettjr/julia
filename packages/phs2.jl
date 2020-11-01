@@ -3,10 +3,10 @@ using SparseArrays
 using LinearAlgebra
 
 ###########################################################################
-#=
-The polyharmonic spline radial basis function in 2D, its first derivatives,
-and the result of applying the hyperviscosity operator on it K times.
-=#
+
+# The polyharmonic spline radial basis function in 2D, its first derivatives,
+# and the result of applying the hyperviscosity operator on it K times.
+
 phi(x, y, phs) = sqrt.(x .^ 2 + y .^ 2) .^ phs
 
 phi_x(x, y, phs) = phs .* x .* sqrt.(x .^ 2 + y .^ 2) .^ (phs - 2)

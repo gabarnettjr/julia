@@ -24,7 +24,7 @@ useAlternateODEfunction = true
 # Wave speed
 c = 1/8
 
-# Number of layers of radial nodes on the unit disk
+# Number of layers of radial nodes on the unit disk (odd number)
 layers = 65
 
 # Set how much the interior nodes will be perturbed
@@ -49,7 +49,7 @@ stc = 19
 K = 2
 
 # Final time
-tf = 100
+tf = 50
 
 #####################################################################
 
@@ -97,7 +97,7 @@ aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
 
 #####################################################################
 
-# Construct the matrix that would apply the entier ODE function
+# Construct the matrix that would apply the entire ODE function
 # in a single matrix-vector multiply, and then get its eigenvalues
 
 null = sparse(zeros(length(x), length(x)))
@@ -265,7 +265,7 @@ function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
         # else
             U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
         # end
-    
+        
         # Stop running if the numerical solution blows up
         if maximum(abs.(U)) > 10
             println("It blew up.")
@@ -277,7 +277,7 @@ function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
 end
 
 mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
-                              q1, q2, q3, q4, frame)
+                     q1, q2, q3, q4, frame)
 
 #####################################################################
 

@@ -61,7 +61,6 @@ plt.axis('equal')
 fig.savefig(outstr + 'nodes.png', bbox_inches = 'tight')
 plt.close()
 
-
 # Load the eigenvalues and plot them, if requested
 if eigenvalues:
     e_real = np.array([])

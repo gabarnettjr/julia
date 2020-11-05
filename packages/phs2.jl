@@ -43,7 +43,7 @@ function getWeights(z, x, m, phs, pol, K)
     # Set ell equal to the number of points in x
     ell = size(x, 2)
     
-    # Initialize the shifted nodes:
+    # Initialize the shifted nodes
     XY = zeros(size(x))
 
     # Shift so z is at (0,0)
@@ -98,7 +98,7 @@ function getWeights(z, x, m, phs, pol, K)
               "Higher degrees are not implemented.")
     end
 
-    # Fill in the polyharmonic spline portion of the matrix A:
+    # Fill in the polyharmonic spline portion of the matrix A
     for i in 1:ell
         for j in 1:ell
             A[i,j] = phi(XY[1,i] - XY[1,j], XY[2,i] - XY[2,j], phs)
@@ -155,7 +155,7 @@ function getWeights(z, x, m, phs, pol, K)
     end
 
     #solve linear system for the weights
-    w = (A \ b)
+    w = A \ b
 
     #remove weights that will be multiplied by 0, and return the rest
     return w[1:ell]

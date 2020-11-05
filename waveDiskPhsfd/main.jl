@@ -16,7 +16,7 @@ include("../packages/phs2.jl")
 # USER INPUT
 
 # Switch to decide whether to plot the eigenvalues of the matrix:
-eigenvalues = false
+eigenvalues = true
 
 # Switch to use alternate ODE function
 useAlternateODEfunction = true
@@ -25,7 +25,7 @@ useAlternateODEfunction = true
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk (odd number)
-layers = 65
+layers = 17
 
 # Set how much the interior nodes will be perturbed
 ptb = .35
@@ -49,7 +49,7 @@ stc = 19
 K = 2
 
 # Final time
-tf = 50
+tf = 10
 
 #####################################################################
 

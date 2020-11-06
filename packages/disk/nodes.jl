@@ -1,3 +1,7 @@
+# module nodes
+
+# export makeRadialNodes, perturbNodes!
+
 #####################################################################
 """
 Distribute nodes somewhat uniformly on the unit disk by starting in
@@ -50,3 +54,5 @@ function perturbNodes!(x, y, layers, ptb, bb)
 end
 
 #####################################################################
+
+# end

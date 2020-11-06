@@ -49,7 +49,7 @@ stc = 19
 K = 2
 
 # Final time
-tf = 10
+tf = 50
 
 #####################################################################
 
@@ -196,62 +196,70 @@ end
 
 #####################################################################
 
+function printAndSave(i, t_i, U, ni, nb, n, frame)
+
+    if useAlternateODEfunction
+    
+        @printf("i = %.0f,  t = %.5f\n", i, t[i])
+        @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
+                maximum(U[1:ni]), maximum(U[ni+1:ni+n]),
+                maximum(U[ni+n+1:ni+2*n]))
+        @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
+                minimum(U[1:ni]), minimum(U[ni+1:ni+n]),
+                minimum(U[ni+n+1:ni+2*n]))
+
+        io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
+        writedlm(io, vcat(U[1:ni],zeros(nb)), ' ')
+        close(io)
+
+        io = open(@sprintf("./results/u_%04d.txt",frame), "w")
+        writedlm(io, U[ni+1:ni+n], ' ')
+        close(io)
+
+        io = open(@sprintf("./results/v_%04d.txt",frame), "w")
+        writedlm(io, U[ni+n+1:ni+2*n], ' ')
+        close(io)
+
+    else
+
+        @printf("i = %.0f,  t = %.5f\n", i, t[i])
+        @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
+                maximum(U[:,1]), maximum(U[:,2]), maximum(U[:,3]))
+        @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
+                minimum(U[:,1]), minimum(U[:,2]), minimum(U[:,3]))
+
+        io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
+        writedlm(io, U[:,1], ' ')
+        close(io)
+
+        io = open(@sprintf("./results/u_%04d.txt",frame), "w")
+        writedlm(io, U[:,2], ' ')
+        close(io)
+
+        io = open(@sprintf("./results/v_%04d.txt",frame), "w")
+        writedlm(io, U[:,3], ' ')
+        close(io)
+
+    end
+
+end
+
+#####################################################################
+
 # The main time-stepping loop
 
 frame = 0
 
-function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
-                              q1, q2, q3, q4, frame)
+function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt
+    , q1, q2, q3, q4, frame)
 
     for i in 1 : Int(tf/dt) + 1
     
         # Every once in a while, print some info and save some things
     
         if mod(i-1, Int((layers-1)/2)) == 0
-    
-            if useAlternateODEfunction
-    
-                @printf("i = %.0f,  t = %.5f\n", i, t[i])
-                @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
-                        maximum(U[1:ni]), maximum(U[ni+1:ni+n]),
-                        maximum(U[ni+n+1:ni+2*n]))
-                @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
-                        minimum(U[1:ni]), minimum(U[ni+1:ni+n]),
-                        minimum(U[ni+n+1:ni+2*n]))
-    
-                io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
-                writedlm(io, vcat(U[1:ni],zeros(nb)), ' ')
-                close(io)
-    
-                io = open(@sprintf("./results/u_%04d.txt",frame), "w")
-                writedlm(io, U[ni+1:ni+n], ' ')
-                close(io)
-    
-                io = open(@sprintf("./results/v_%04d.txt",frame), "w")
-                writedlm(io, U[ni+n+1:ni+2*n], ' ')
-                close(io)
-    
-            else
-    
-                @printf("i = %.0f,  t = %.5f\n", i, t[i])
-                @printf("maxRho = %.5f,  maxU = %.5f,  maxV = %.5f\n", 
-                        maximum(U[:,1]), maximum(U[:,2]), maximum(U[:,3]))
-                @printf("minRho = %.5f,  minU = %.5f,  minV = %.5f\n\n", 
-                        minimum(U[:,1]), minimum(U[:,2]), minimum(U[:,3]))
-    
-                io = open(@sprintf("./results/rho_%04d.txt",frame), "w")
-                writedlm(io, U[:,1], ' ')
-                close(io)
-    
-                io = open(@sprintf("./results/u_%04d.txt",frame), "w")
-                writedlm(io, U[:,2], ' ')
-                close(io)
-    
-                io = open(@sprintf("./results/v_%04d.txt",frame), "w")
-                writedlm(io, U[:,3], ' ')
-                close(io)
-    
-            end
+
+            printAndSave(i, t[i], U, ni, nb, n, frame)
     
             frame = frame + 1
     

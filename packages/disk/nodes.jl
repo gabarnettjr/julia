@@ -1,13 +1,8 @@
-# module nodes
-
-# export makeRadialNodes, perturbNodes!
-
 #####################################################################
 """
 Distribute nodes somewhat uniformly on the unit disk by starting in
 the middle and working your way out in layers.
 """
-
 function makeRadialNodes(layers; n=6)
 
     h = 1 / (layers - 1)
@@ -54,5 +49,3 @@ function perturbNodes!(x, y, layers, ptb, bb)
 end
 
 #####################################################################
-
-# end

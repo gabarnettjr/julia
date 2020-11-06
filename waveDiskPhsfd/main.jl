@@ -248,10 +248,10 @@ end
 
 # The main time-stepping loop
 
-frame = 0
-
 function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt
-    , q1, q2, q3, q4, frame)
+, q1, q2, q3, q4)
+
+    frame = 0
 
     for i in 1 : Int(tf/dt) + 1
     
@@ -284,8 +284,8 @@ function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt
 
 end
 
-mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt,
-                     q1, q2, q3, q4, frame)
+mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt
+, q1, q2, q3, q4)
 
 #####################################################################
 

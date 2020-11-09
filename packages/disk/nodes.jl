@@ -25,9 +25,11 @@ end
 #####################################################################
 
 function makeCartesianNodes(n)
+
     x = []
     y = []
     j = Int(round(sqrt(n)))
+
     while length(x) < n
         x = range(-1, stop=1, length=j)
         y = copy(x)
@@ -40,15 +42,19 @@ function makeCartesianNodes(n)
         y = y[ii]
         j = j + 1
     end
+
     return x, y, j - Int(round(sqrt(n)))
+
 end
 
 #####################################################################
 
 function makeRandomNodes(n)
+
     x = []
     y = []
     iterations = 0
+
     while length(x) != n
         p = -1 .+ 2 * rand(Int(round(4/pi*n)), 2)
         x = p[:,1]
@@ -58,15 +64,19 @@ function makeRandomNodes(n)
         y = y[ii]
         iterations = iterations + 1
     end
+
     return x, y, iterations
+
 end
 
 #####################################################################
 
 function makeHaltonNodes(n)
+
     x = []
     y = []
     ell = n
+
     while length(x) != n
         H = HaltonPoint(2, length=ell)
         x = zeros(ell)
@@ -82,7 +92,9 @@ function makeHaltonNodes(n)
         y = y[ii]
         ell = ell + 1;
     end
+
     return x, y, ell - n
+
 end
 
 #####################################################################

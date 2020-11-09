@@ -36,10 +36,13 @@ with open('./results/ye.txt') as f:
 
 ###########################################################################
 
+alp = 1.1
+
 # plot the nodes and save them
 fig = plt.figure(figsize = (12, 10))
 plt.plot(xe, ye, 'y.', x, y, 'k.')
 plt.axis('equal')
+plt.axis([-alp, alp, -alp, alp])
 plt.title('{0:0d} nodes, {1:0d} eval pts'.format(len(x), len(xe)))
 fig.savefig('./figures/nodes.png', bbox_inches = 'tight')
 plt.close()
@@ -69,7 +72,7 @@ ax = fig.add_subplot(111)
 cs = ax.tricontour(triang, app, levels = clevels)
 fig.colorbar(cs)
 plt.axis('equal')
-plt.axis([-1,1,-1,1])
+plt.axis([-alp, alp, -alp, alp])
 fig.savefig('./figures/app.png', bbox_inches = 'tight')
 plt.close()
 
@@ -80,7 +83,7 @@ cs = ax.tricontourf(triang, app-exact, levels = 20)
 plt.plot(x, y, 'k.')
 fig.colorbar(cs)
 plt.axis('equal')
-# plt.axis([-1,1,-1,1])
+plt.axis([-alp, alp, -alp, alp])
 fig.savefig('./figures/diff.png', bbox_inches = 'tight')
 plt.close()
 

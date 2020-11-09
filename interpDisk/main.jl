@@ -9,31 +9,54 @@ include("../packages/disk/nodes.jl")
 
 #####################################################################
 
+# Frequency of the exact solution
 frq = 3
+
+# Number of nodes
 n = 1000
+
+# number of layers in the regular evaluation points
 layers = 65
+
 phs = 5
 pol = 2
 stc = 19
+
+# How much to go beyond [-1,1]
 del = .2
 
 #####################################################################
 
-# The Halton nodes where information is known
-H = HaltonPoint(2, length=n)
-x = zeros(n)
-y = zeros(n)
-for i in 1:n
-    x[i] = H[i][1]
-    y[i] = H[i][2]
-end
-x = -1-del/2 .+ (2+del) * x
-y = -1-del/2 .+ (2+del) * y
+# # The Halton nodes where information is known
+# H = HaltonPoint(2, length=n)
+# x = zeros(n)
+# y = zeros(n)
+# for i in 1:n
+    # x[i] = H[i][1]
+    # y[i] = H[i][2]
+# end
+# x = -1-del/2 .+ (2+del) * x
+# y = -1-del/2 .+ (2+del) * y
 
-# # The random nodes where information is known
-# p = -1-del/2 .+ (2+del) * rand(n,2)
-# x = p[:,1]
-# y = p[:,2]
+# The random nodes where information is known
+function getRandomNodes(n, del)
+    x = []
+    y = []
+    iterations = 0
+    while length(x) != n
+        p = -1-del/2 .+ (2+del) * rand(Int(round(4/pi*n)), 2)
+        x = p[:,1]
+        y = p[:,2]
+        ii = sqrt.(x .^ 2 .+ y .^ 2) .<= 1+del/2
+        x = x[ii]
+        y = y[ii]
+        iterations = iterations + 1
+    end
+    return x, y, iterations
+end
+x, y, iterations = getRandomNodes(n, del)
+
+println(iterations)
 
 # # The Cartesian nodes where information is known
 # x = range(-1-del/2, stop=1+del/2, length=Int(round(sqrt(n))))
@@ -43,10 +66,10 @@ y = -1-del/2 .+ (2+del) * y
 # x = xx[:]
 # y = yy[:]
 
-# Only keep nodes inside a certain radius
-ii = sqrt.(x .^ 2 .+ y .^ 2) .<= 1+del/2
-x = x[ii]
-y = y[ii]
+# # Only keep nodes inside a certain radius
+# ii = sqrt.(x .^ 2 .+ y .^ 2) .<= 1+del/2
+# x = x[ii]
+# y = y[ii]
 
 # The regular nodes where information is desired
 xe, ye = makeRadialNodes(layers)
@@ -92,17 +115,4 @@ writedlm(io, exact, ' ')
 close(io)
 
 #####################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
 

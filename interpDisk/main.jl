@@ -22,54 +22,20 @@ phs = 5
 pol = 2
 stc = 19
 
-# How much to go beyond [-1,1]
-del = .2
+# How much to go beyond a radius of 1
+del = .1
 
 #####################################################################
 
-# # The Halton nodes where information is known
-# H = HaltonPoint(2, length=n)
-# x = zeros(n)
-# y = zeros(n)
-# for i in 1:n
-    # x[i] = H[i][1]
-    # y[i] = H[i][2]
-# end
-# x = -1-del/2 .+ (2+del) * x
-# y = -1-del/2 .+ (2+del) * y
-
-# The random nodes where information is known
-function getRandomNodes(n, del)
-    x = []
-    y = []
-    iterations = 0
-    while length(x) != n
-        p = -1-del/2 .+ (2+del) * rand(Int(round(4/pi*n)), 2)
-        x = p[:,1]
-        y = p[:,2]
-        ii = sqrt.(x .^ 2 .+ y .^ 2) .<= 1+del/2
-        x = x[ii]
-        y = y[ii]
-        iterations = iterations + 1
-    end
-    return x, y, iterations
-end
-x, y, iterations = getRandomNodes(n, del)
+# x, y, iterations = makeHaltonNodes(n)
+x, y, iterations = makeRandomNodes(n)
+# x, y, iterations = makeCartesianNodes(n)
 
 println(iterations)
 
-# # The Cartesian nodes where information is known
-# x = range(-1-del/2, stop=1+del/2, length=Int(round(sqrt(n))))
-# y = copy(x)
-# xx = repeat(x, 1, length(y))
-# yy = repeat(y', length(x), 1)
-# x = xx[:]
-# y = yy[:]
-
-# # Only keep nodes inside a certain radius
-# ii = sqrt.(x .^ 2 .+ y .^ 2) .<= 1+del/2
-# x = x[ii]
-# y = y[ii]
+# Scale the nodes out over the boundary
+x = (1 + del) * x
+y = (1 + del) * y
 
 # The regular nodes where information is desired
 xe, ye = makeRadialNodes(layers)

@@ -27,7 +27,7 @@ c = 1/8
 # Number of layers of radial nodes on the unit disk (odd number)
 layers = 17
 
-# Set how much the interior nodes will be perturbed
+# Set how much the nodes will be perturbed
 ptb = .35
 
 # Delta t

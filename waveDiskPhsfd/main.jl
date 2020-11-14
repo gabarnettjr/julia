@@ -123,6 +123,7 @@ end
 #####################################################################
 
 # Initialize main solution array U
+
 x0 = 0.1
 y0 = 0.2
 if useAlternateODEfunction
@@ -134,6 +135,7 @@ else
 end
 
 # Initialize dummy arrays to be used in Runge-Kutta
+
 q1 = zeros(size(U))                              #needed in all cases
 q2 = zeros(size(U))                           #needed for rk3 and rk4
 q3 = []

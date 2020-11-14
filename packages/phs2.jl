@@ -1,3 +1,7 @@
+# module phs2
+
+# export phi phi_x phi_y phiHV getDM
+
 using NearestNeighbors
 using SparseArrays
 using LinearAlgebra
@@ -358,3 +362,4 @@ end
 
 ###########################################################################
 
+# end

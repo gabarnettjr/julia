@@ -19,13 +19,13 @@ else:
     whatToPlot = "rho"
 
 # Directory where the *.txt files are located (in string)
-instr = 'results\\'
+instr = 'results/'
 
 # Get the variable string
 varstr = instr + whatToPlot
 
 # Directory where the *.png files will end up (out string)
-outstr = 'figures\\'
+outstr = 'figures/'
 
 # Set the contour levels
 if whatToPlot == "rho":

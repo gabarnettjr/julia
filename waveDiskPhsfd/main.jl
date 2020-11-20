@@ -16,7 +16,7 @@ include("../packages/phs2.jl")
 # USER INPUT
 
 # Switch to decide whether to plot the eigenvalues of the matrix:
-eigenvalues = true
+eigenvalues = false
 
 # Switch to use alternate ODE function
 useAlternateODEfunction = true
@@ -25,10 +25,10 @@ useAlternateODEfunction = true
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk (odd number)
-layers = 17
+layers = 65
 
 # Set how much the nodes will be perturbed
-ptb = .35
+ptb = .30
 
 # Delta t
 dt = 1/4/c * 1/(layers - 1)
@@ -151,25 +151,22 @@ end
 
 if useAlternateODEfunction
 
-    function odefun!(t, U, A, dUdt)
-
-        dUdt = ODEfunction2!(t, U, A, dUdt)
-
-        return dUdt
-
+    function odefun!(t, U, dUdt)
+        global A
+        return A*U
     end
+
+    # function odefun!(t, U, A, dUdt)
+    #     dUdt = ODEfunction2!(t, U, A, dUdt)
+    #     return dUdt
+    # end
 
 else
 
-    function odefun!(t, U, A, dUdt)
-    
-        # Things that are needed from outside the scope of the function
+    function odefun!(t, U, dUdt)
         global cWx, cWy, aWhv, bb, ii
-    
         dUdt = ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb, ii)
-    
         return dUdt
-    
     end
 
 end
@@ -179,16 +176,26 @@ end
 # Define the Runge-Kutta function based on the number of stages
 
 if rkstages == 3
-
-    function rk!(t, U, odefun!, dt, A, q1, q2, q3, q4)
-        return rk3!(t, U, odefun!, dt, A, q1, q2, q3, q4)
+    
+    function rk!(t, U, odefun!)
+        global dt, q1, q2
+        return rk3!(t, U, odefun!, dt, q1, q2)
     end
+
+    # function rk!(t, U, odefun!, dt, A, q1, q2, q3, q4)
+    #     return rk3!(t, U, odefun!, dt, A, q1, q2, q3, q4)
+    # end
 
 elseif rkstages == 4
 
-    function rk!(t, U, odefun!, dt, q1, q2, q3, q4)
+    function rk!(t, U, odefun!)
+        global dt, q1, q2, q3, q4
         return rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
     end
+
+    # function rk!(t, U, odefun!, dt, q1, q2, q3, q4)
+    #     return rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
+    # end
 
 else
 
@@ -250,44 +257,40 @@ end
 
 # The main time-stepping loop
 
-function mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt
-, q1, q2, q3, q4)
+frame = 0
 
-    frame = 0
+for i in 1 : Int(tf/dt) + 1
 
-    for i in 1 : Int(tf/dt) + 1
-    
-        # Every once in a while, print some info and save some things
-    
-        if mod(i-1, Int((layers-1)/2)) == 0
+    global rk!, odefun!, rkstages, U, t, frame
 
-            printAndSave(i, t[i], U, ni, nb, n, frame)
-    
-            frame = frame + 1
-    
+    # Every once in a while, print some info and save some things
+
+    if mod(i-1, Int((layers-1)/2)) == 0
+
+        printAndSave(i, t[i], U, ni, nb, n, frame)
+
+        frame = frame + 1
+
+    end
+
+    # Update the array U to the next time level
+    if mod(i-1, Int((layers-1)/2)) == 0
+        @time begin
+            U = rk!(t[i], U, odefun!)
+            # U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
         end
+    else
+      U = rk!(t[i], U, odefun!)
+      # U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
+    end
     
-        # Update the array U to the next time level
-        # if mod(i-1, Int((layers-1)/2)) == 0
-        #     @time begin
-        #         U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
-        #     end
-        # else
-            U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
-        # end
-        
-        # Stop running if the numerical solution blows up
-        if maximum(abs.(U)) > 10
-            println("It blew up.")
-            break
-        end
-    
+    # Stop running if the numerical solution blows up
+    if maximum(abs.(U)) > 10
+        println("It blew up.")
+        break
     end
 
 end
-
-mainTimeSteppingLoop(rk!, odefun!, rkstages, U, t, dt
-, q1, q2, q3, q4)
 
 #####################################################################
 

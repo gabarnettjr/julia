@@ -5,7 +5,7 @@ using HaltonSequences
 #####################################################################
 
 include("../packages/phs2.jl")
-# import phs2
+# using phs2
 include("../packages/disk/nodes.jl")
 
 #####################################################################

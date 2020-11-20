@@ -83,21 +83,11 @@ end
 
 #####################################################################
 
-function ODEfunction2!(t, U, A, dUdt)
+function rk3!(t, U, odefun!, dt, q1, q2)
 
-    dUdt = A * U
-
-    return dUdt
-
-end
-
-#####################################################################
-
-function rk3!(t, U, odefun!, dt, A, q1, q2, q3, q4)
-
-    q1 = odefun!(t,        U,           A, q1)
-    q2 = odefun!(t+dt/3,   U+dt/3*q1,   A, q2)
-    q2 = odefun!(t+2*dt/3, U+2*dt/3*q2, A, q2)
+    q1 = odefun!(t,        U,           q1)
+    q2 = odefun!(t+dt/3,   U+dt/3*q1,   q2)
+    q2 = odefun!(t+2*dt/3, U+2*dt/3*q2, q2)
 
     U = U + dt/4 * (q1 + 3*q2)
 
@@ -105,19 +95,44 @@ function rk3!(t, U, odefun!, dt, A, q1, q2, q3, q4)
 
 end
 
+# function rk3!(t, U, odefun!, dt, A, q1, q2, q3, q4)
+# 
+#     q1 = odefun!(t,        U,           A, q1)
+#     q2 = odefun!(t+dt/3,   U+dt/3*q1,   A, q2)
+#     q2 = odefun!(t+2*dt/3, U+2*dt/3*q2, A, q2)
+# 
+#     U = U + dt/4 * (q1 + 3*q2)
+# 
+#     return U
+# 
+# end
+
 #####################################################################
 
-function rk4!(t, U, odefun!, dt, A, q1, q2, q3, q4)
+function rk4!(t, U, odefun!, dt,  q1, q2, q3, q4)
 
-    q1 = odefun!(t,      U,         A, q1)
-    q2 = odefun!(t+dt/2, U+dt/2*q1, A, q2)
-    q3 = odefun!(t+dt/2, U+dt/2*q2, A, q3)
-    q4 = odefun!(t+dt,   U+dt*q3,   A, q4)
+    q1 = odefun!(t,      U,          q1)
+    q2 = odefun!(t+dt/2, U+dt/2*q1,  q2)
+    q3 = odefun!(t+dt/2, U+dt/2*q2,  q3)
+    q4 = odefun!(t+dt,   U+dt*q3,    q4)
 
     U = U + dt/6 * (q1 + 2*q2 + 2*q3 + q4)
 
     return U
 
 end
+
+# function rk4!(t, U, odefun!, dt, A, q1, q2, q3, q4)
+# 
+#     q1 = odefun!(t,      U,         A, q1)
+#     q2 = odefun!(t+dt/2, U+dt/2*q1, A, q2)
+#     q3 = odefun!(t+dt/2, U+dt/2*q2, A, q3)
+#     q4 = odefun!(t+dt,   U+dt*q3,   A, q4)
+# 
+#     U = U + dt/6 * (q1 + 2*q2 + 2*q3 + q4)
+# 
+#     return U
+# 
+# end
 
 #####################################################################

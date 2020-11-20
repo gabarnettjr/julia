@@ -10,7 +10,7 @@ import os
 # USER INPUT
 
 # Decide whether to plot the eigenvalues
-eigenvalues = True
+eigenvalues = False
 
 # If the user passes in an argument, assume it's the variable to plot
 if len(sys.argv) > 1:

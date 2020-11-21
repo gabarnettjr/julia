@@ -16,40 +16,40 @@ include("../packages/phs2.jl")
 # USER INPUT
 
 # Switch to decide whether to plot the eigenvalues of the matrix:
-eigenvalues = false
+const eigenvalues = false
 
 # Switch to use alternate ODE function
-useAlternateODEfunction = true
+const useAlternateODEfunction = true
 
 # Wave speed
-c = 1/8
+const c = 1/8
 
 # Number of layers of radial nodes on the unit disk (odd number)
-layers = 65
+const layers = 33
 
 # Set how much the nodes will be perturbed
-ptb = .30
+const ptb = .30
 
 # Delta t
-dt = 1/4/c * 1/(layers - 1)
+const dt = 1/4/c * 1/(layers - 1)
 
 # Runge-Kutta stages
-rkstages = 3
+const rkstages = 3
 
 # Exponent in the polyharmonic spline function
-phs = 5
+const phs = 5
 
 # Highest degree of polynomial to include in the basis
-pol = 2
+const pol = 2
 
 # Stencil size
-stc = 19
+const stc = 19
 
 # Hyperviscosity exponent
-K = 2
+const K = 2
 
 # Final time
-tf = 10
+const tf = 10
 
 #####################################################################
 
@@ -58,42 +58,42 @@ rm("results", recursive = true)
 mkdir("results")
 
 # Array of all times
-t = range(0, stop=tf, step=dt)
+const t = range(0, stop=tf, step=dt)
 
 # Get the nodes on the unit disk
 x, y = makeRadialNodes(layers)
 
 # Set the hyperviscosity coefficient
 if K == 2
-    a = -2^(-7) * c * 1 / (layers - 1) ^ (2*K-1)
+    const a = -2^(-7) * c * 1 / (layers - 1) ^ (2*K-1)
 elseif K == 3
-    a = 2^(-10) * c * 1 / (layers - 1) ^ (2*K-1)
+    const a = 2^(-10) * c * 1 / (layers - 1) ^ (2*K-1)
 else
     error("Still need to implement other cases.")
 end
 
 # Index of the boundary nodes
-bb = abs.(x .^ 2 .+ y .^ 2) .> (1 - 1e-6)
+const bb = abs.(x .^ 2 .+ y .^ 2) .> (1 - 1e-6)
 
 # Index of the interior nodes
-ii = abs.(x .^ 2 .+ y .^ 2) .< (1 - 1e-6)
+const ii = abs.(x .^ 2 .+ y .^ 2) .< (1 - 1e-6)
 
 # Perturb the nodes by percentage ptb of node spacing
 x, y = perturbNodes!(x, y, layers, ptb, bb)
 
 # Number of nodes total
-n = length(x)
+const n = length(x)
 
 # Number of interior nodes
-ni = length(x[ii])
+const ni = length(x[ii])
 
 # Number of boundary nodes
-nb = length(x[bb])
+const nb = length(x[bb])
 
 # Get all of the DMs that will be needed for the wave equation
-cWx = c * getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)
-cWy = c * getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0)
-aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
+const cWx = c * getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)
+const cWy = c * getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0)
+const aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
 
 #####################################################################
 
@@ -102,13 +102,14 @@ aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
 
 null = sparse(zeros(length(x), length(x)))
 
-A = hcat(   aWhv[ii,ii],    cWx[ii,:], cWy[ii,:])
-A = vcat(A, hcat(cWx[:,ii], null,      null))
-A = vcat(A, hcat(cWy[:,ii], null,      null))
+tmp = hcat(   aWhv[ii,ii],    cWx[ii,:], cWy[ii,:])
+tmp = vcat(tmp, hcat(cWx[:,ii], null,      null))
+tmp = vcat(tmp, hcat(cWy[:,ii], null,      null))
+const A = tmp
 
 if eigenvalues
 
-    eigenvalues = eigvals(Matrix(A))
+    eigenvalues = eigvals(Matrix(B))
 
     io = open("./results/e_real.txt", "w")
     writedlm(io, real(eigenvalues), ' ')
@@ -124,8 +125,8 @@ end
 
 # Initialize main solution array U
 
-x0 = 0.1
-y0 = 0.2
+const x0 = 0.1
+const y0 = 0.2
 if useAlternateODEfunction
     U = zeros(ni+n+n)
     U[1:ni] = exp.(-20*((x[ii] .- x0) .^ 2 .+ (y[ii] .- y0) .^ 2))
@@ -136,13 +137,13 @@ end
 
 # Initialize dummy arrays to be used in Runge-Kutta
 
-q1 = zeros(size(U))                              #needed in all cases
-q2 = zeros(size(U))                           #needed for rk3 and rk4
+const q1 = zeros(size(U))                        #needed in all cases
+const q2 = zeros(size(U))                     #needed for rk3 and rk4
 q3 = []
 q4 = []
 if rkstages == 4
-    q3 = zeros(size(U))                               #needed for rk4
-    q4 = zeros(size(U))                               #needed for rk4
+    const q3 = zeros(size(U))                         #needed for rk4
+    const q4 = zeros(size(U))                         #needed for rk4
 end
 
 #####################################################################
@@ -152,19 +153,12 @@ end
 if useAlternateODEfunction
 
     function odefun!(t, U, dUdt)
-        global A
         return A*U
     end
-
-    # function odefun!(t, U, A, dUdt)
-    #     dUdt = ODEfunction2!(t, U, A, dUdt)
-    #     return dUdt
-    # end
 
 else
 
     function odefun!(t, U, dUdt)
-        global cWx, cWy, aWhv, bb, ii
         dUdt = ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb, ii)
         return dUdt
     end
@@ -178,24 +172,14 @@ end
 if rkstages == 3
     
     function rk!(t, U, odefun!)
-        global dt, q1, q2
         return rk3!(t, U, odefun!, dt, q1, q2)
     end
-
-    # function rk!(t, U, odefun!, dt, A, q1, q2, q3, q4)
-    #     return rk3!(t, U, odefun!, dt, A, q1, q2, q3, q4)
-    # end
 
 elseif rkstages == 4
 
     function rk!(t, U, odefun!)
-        global dt, q1, q2, q3, q4
         return rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
     end
-
-    # function rk!(t, U, odefun!, dt, q1, q2, q3, q4)
-    #     return rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
-    # end
 
 else
 
@@ -205,7 +189,7 @@ end
 
 #####################################################################
 
-function printAndSave(i, t_i, U, ni, nb, n, frame)
+function printAndSave(i, t_i, U, frame)
 
     if useAlternateODEfunction
     
@@ -260,28 +244,22 @@ end
 frame = 0
 
 for i in 1 : Int(tf/dt) + 1
-
-    global rk!, odefun!, rkstages, U, t, frame
+    
+    global U, frame
 
     # Every once in a while, print some info and save some things
-
     if mod(i-1, Int((layers-1)/2)) == 0
-
-        printAndSave(i, t[i], U, ni, nb, n, frame)
-
+        printAndSave(i, t[i], U, frame)
         frame = frame + 1
-
     end
 
     # Update the array U to the next time level
     if mod(i-1, Int((layers-1)/2)) == 0
         @time begin
             U = rk!(t[i], U, odefun!)
-            # U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
         end
     else
       U = rk!(t[i], U, odefun!)
-      # U = rk!(t[i], U, odefun!, dt, A, q1, q2, q3, q4)
     end
     
     # Stop running if the numerical solution blows up

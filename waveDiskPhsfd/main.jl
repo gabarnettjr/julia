@@ -16,40 +16,40 @@ include("../packages/phs2.jl")
 # USER INPUT
 
 # Switch to decide whether to plot the eigenvalues of the matrix:
-const eigenvalues = false
+getEigenvalues = false
 
 # Switch to use alternate ODE function
-const useAlternateODEfunction = true
+useAlternateODEfunction = true
 
 # Wave speed
-const c = 1/8
+c = 1/8
 
 # Number of layers of radial nodes on the unit disk (odd number)
-const layers = 33
+layers = 65
 
 # Set how much the nodes will be perturbed
-const ptb = .30
+ptb = .30
 
 # Delta t
-const dt = 1/4/c * 1/(layers - 1)
+dt = 1/4/c * 1/(layers - 1)
 
 # Runge-Kutta stages
-const rkstages = 3
+rkstages = 3
 
 # Exponent in the polyharmonic spline function
-const phs = 5
+phs = 5
 
 # Highest degree of polynomial to include in the basis
-const pol = 2
+pol = 2
 
 # Stencil size
-const stc = 19
+stc = 19
 
 # Hyperviscosity exponent
-const K = 2
+K = 2
 
 # Final time
-const tf = 10
+tf = 100
 
 #####################################################################
 
@@ -58,42 +58,42 @@ rm("results", recursive = true)
 mkdir("results")
 
 # Array of all times
-const t = range(0, stop=tf, step=dt)
+t = range(0, stop=tf, step=dt)
 
 # Get the nodes on the unit disk
 x, y = makeRadialNodes(layers)
 
 # Set the hyperviscosity coefficient
 if K == 2
-    const a = -2^(-7) * c * 1 / (layers - 1) ^ (2*K-1)
+    a = -2^(-7) * c * 1 / (layers - 1) ^ (2*K-1)
 elseif K == 3
-    const a = 2^(-10) * c * 1 / (layers - 1) ^ (2*K-1)
+    a = 2^(-10) * c * 1 / (layers - 1) ^ (2*K-1)
 else
     error("Still need to implement other cases.")
 end
 
 # Index of the boundary nodes
-const bb = abs.(x .^ 2 .+ y .^ 2) .> (1 - 1e-6)
+bb = abs.(x .^ 2 .+ y .^ 2) .> (1 - 1e-6)
 
 # Index of the interior nodes
-const ii = abs.(x .^ 2 .+ y .^ 2) .< (1 - 1e-6)
+ii = abs.(x .^ 2 .+ y .^ 2) .< (1 - 1e-6)
 
 # Perturb the nodes by percentage ptb of node spacing
 x, y = perturbNodes!(x, y, layers, ptb, bb)
 
 # Number of nodes total
-const n = length(x)
+n = length(x)
 
 # Number of interior nodes
-const ni = length(x[ii])
+ni = length(x[ii])
 
 # Number of boundary nodes
-const nb = length(x[bb])
+nb = length(x[bb])
 
 # Get all of the DMs that will be needed for the wave equation
-const cWx = c * getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)
-const cWy = c * getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0)
-const aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
+cWx = c * getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)
+cWy = c * getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0)
+aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
 
 #####################################################################
 
@@ -102,14 +102,13 @@ const aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
 
 null = sparse(zeros(length(x), length(x)))
 
-tmp = hcat(   aWhv[ii,ii],    cWx[ii,:], cWy[ii,:])
-tmp = vcat(tmp, hcat(cWx[:,ii], null,      null))
-tmp = vcat(tmp, hcat(cWy[:,ii], null,      null))
-const A = tmp
+A = hcat(   aWhv[ii,ii],    cWx[ii,:], cWy[ii,:])
+A = vcat(A, hcat(cWx[:,ii], null,      null))
+A = vcat(A, hcat(cWy[:,ii], null,      null))
 
-if eigenvalues
+if getEigenvalues
 
-    eigenvalues = eigvals(Matrix(B))
+    eigenvalues = eigvals(Matrix(A))
 
     io = open("./results/e_real.txt", "w")
     writedlm(io, real(eigenvalues), ' ')
@@ -125,8 +124,8 @@ end
 
 # Initialize main solution array U
 
-const x0 = 0.1
-const y0 = 0.2
+x0 = 0.1
+y0 = 0.2
 if useAlternateODEfunction
     U = zeros(ni+n+n)
     U[1:ni] = exp.(-20*((x[ii] .- x0) .^ 2 .+ (y[ii] .- y0) .^ 2))
@@ -137,32 +136,24 @@ end
 
 # Initialize dummy arrays to be used in Runge-Kutta
 
-const q1 = zeros(size(U))                        #needed in all cases
-const q2 = zeros(size(U))                     #needed for rk3 and rk4
+q1 = zeros(size(U))                        #needed in all cases
+q2 = zeros(size(U))                     #needed for rk3 and rk4
 q3 = []
 q4 = []
 if rkstages == 4
-    const q3 = zeros(size(U))                         #needed for rk4
-    const q4 = zeros(size(U))                         #needed for rk4
+    q3 = zeros(size(U))                         #needed for rk4
+    q4 = zeros(size(U))                         #needed for rk4
 end
 
 #####################################################################
 
 # Define an ODE function which can be passed to rk
 
-if useAlternateODEfunction
-
-    function odefun!(t, U, dUdt)
-        return A*U
-    end
-
+if useAlternateODEfunction	
+	odefun! = (t, U, dUdt) -> A*U
 else
-
-    function odefun!(t, U, dUdt)
-        dUdt = ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb, ii)
-        return dUdt
-    end
-
+	odefun! = (t, U, dUdt) ->
+		ODEfunction!(t, U, dUdt, cWx, cWy, aWhv, bb, ii)
 end
 
 #####################################################################
@@ -170,26 +161,16 @@ end
 # Define the Runge-Kutta function based on the number of stages
 
 if rkstages == 3
-    
-    function rk!(t, U, odefun!)
-        return rk3!(t, U, odefun!, dt, q1, q2)
-    end
-
+	rk! = (t, U, odefun!) -> rk3!(t, U, odefun!, dt, q1, q2)
 elseif rkstages == 4
-
-    function rk!(t, U, odefun!)
-        return rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
-    end
-
+	rk! = (t, U, odefun!) -> rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
 else
-
     error("rkstages should be 3 or 4 please.")
-
 end
 
 #####################################################################
 
-function printAndSave(i, t_i, U, frame)
+function printAndSave(i, U, frame)
 
     if useAlternateODEfunction
     
@@ -249,7 +230,7 @@ for i in 1 : Int(tf/dt) + 1
 
     # Every once in a while, print some info and save some things
     if mod(i-1, Int((layers-1)/2)) == 0
-        printAndSave(i, t[i], U, frame)
+        printAndSave(i, U, frame)
         frame = frame + 1
     end
 

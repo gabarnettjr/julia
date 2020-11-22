@@ -14,10 +14,10 @@ include("../packages/disk/nodes.jl")
 frq = 3
 
 # Number of nodes
-n = 1000
+n = 250*4^1
 
 # number of layers in the regular evaluation points
-layers = 65
+layers = 129
 
 phs = 5
 pol = 2

@@ -100,11 +100,13 @@ aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
 # Construct the matrix that would apply the entire ODE function
 # in a single matrix-vector multiply, and then get its eigenvalues
 
-null = sparse(zeros(length(x), length(x)))
+null = spzeros(length(x), length(x))
 
 A = hcat(   aWhv[ii,ii],    cWx[ii,:], cWy[ii,:])
 A = vcat(A, hcat(cWx[:,ii], null,      null))
 A = vcat(A, hcat(cWy[:,ii], null,      null))
+
+A = dropzeros(A)
 
 if getEigenvalues
 

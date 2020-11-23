@@ -16,7 +16,7 @@ include("../packages/phs2.jl")
 # USER INPUT
 
 # Switch to decide whether to plot the eigenvalues of the matrix:
-getEigenvalues = false
+getEigenvalues = true
 
 # Switch to use alternate ODE function
 useAlternateODEfunction = true
@@ -25,7 +25,7 @@ useAlternateODEfunction = true
 c = 1/8
 
 # Number of layers of radial nodes on the unit disk (odd number)
-layers = 65
+layers = 17
 
 # Set how much the nodes will be perturbed
 ptb = .30
@@ -49,7 +49,7 @@ stc = 19
 K = 2
 
 # Final time
-tf = 100
+tf = 10
 
 #####################################################################
 
@@ -135,6 +135,8 @@ else
     U = zeros(length(x), 3)
     U[:,1] = exp.(-20*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
 end
+
+#####################################################################
 
 # Initialize dummy arrays to be used in Runge-Kutta
 
@@ -230,19 +232,17 @@ for i in 1 : Int(tf/dt) + 1
     
     global U, frame
 
-    # Every once in a while, print some info and save some things
     if mod(i-1, Int((layers-1)/2)) == 0
+        # Print some info and save some things
         printAndSave(i, U, frame)
         frame = frame + 1
-    end
-
-    # Update the array U to the next time level
-    if mod(i-1, Int((layers-1)/2)) == 0
+        # Time the Runge-Kutta update
         @time begin
             U = rk!(t[i], U, odefun!)
         end
     else
-      U = rk!(t[i], U, odefun!)
+        # Just update the array U to the next time level
+        U = rk!(t[i], U, odefun!)
     end
     
     # Stop running if the numerical solution blows up
@@ -265,6 +265,10 @@ close(io)
 
 io = open("./results/y.txt", "w")
 writedlm(io, y, ' ')
+close(io)
+
+io = open("./results/getEigenvalues.txt", "w")
+writedlm(io, getEigenvalues, ' ')
 close(io)
 
 #####################################################################

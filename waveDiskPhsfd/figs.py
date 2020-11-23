@@ -9,9 +9,6 @@ import os
 
 # USER INPUT
 
-# Decide whether to plot the eigenvalues
-eigenvalues = False
-
 # If the user passes in an argument, assume it's the variable to plot
 if len(sys.argv) > 1:
     whatToPlot = sys.argv[1]
@@ -61,8 +58,11 @@ plt.axis('equal')
 fig.savefig(outstr + 'nodes.png', bbox_inches = 'tight')
 plt.close()
 
-# Load the eigenvalues and plot them, if requested
-if eigenvalues:
+# Load the eigenvalues and plot them, if available
+with open(instr + 'getEigenvalues.txt') as f:
+    for line in f:
+        plotEigenvalues = line
+if (plotEigenvalues[:-1] == "true"):
     e_real = np.array([])
     with open(instr + 'e_real.txt') as f:
         for line in f:

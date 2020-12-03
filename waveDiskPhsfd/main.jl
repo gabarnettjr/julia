@@ -226,32 +226,36 @@ end
 
 # The main time-stepping loop
 
-frame = 0
+function mainLoop(t, U, odefun!, rk!, dt, tf, layers)
 
-for i in 1 : Int(tf/dt) + 1
-    
-    global U, frame
+    frame = 0
 
-    if mod(i-1, Int((layers-1)/2)) == 0
-        # Print some info and save some things
-        printAndSave(i, U, frame)
-        frame = frame + 1
-        # Time the Runge-Kutta update
-        @time begin
+    for i in 1 : Int(tf/dt) + 1
+
+        if mod(i-1, Int((layers-1)/2)) == 0
+            # Print some info and save some things
+            printAndSave(i, U, frame)
+            frame = frame + 1
+            # Time the Runge-Kutta update
+            @time begin
+                U = rk!(t[i], U, odefun!)
+            end
+        else
+            # Just update the array U to the next time level
             U = rk!(t[i], U, odefun!)
         end
-    else
-        # Just update the array U to the next time level
-        U = rk!(t[i], U, odefun!)
+        
+        # Stop running if the numerical solution blows up
+        if maximum(abs.(U)) > 10
+            println("It blew up.")
+            break
+        end
+
     end
     
-    # Stop running if the numerical solution blows up
-    if maximum(abs.(U)) > 10
-        println("It blew up.")
-        break
-    end
-
 end
+
+mainLoop(t, U, odefun!, rk!, dt, tf, layers)
 
 #####################################################################
 

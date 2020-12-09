@@ -11,6 +11,8 @@ include("../packages/disk/waveEquation.jl")
 
 include("../packages/phs2.jl")
 
+include("../packages/rk.jl")
+
 #####################################################################
 
 # USER INPUT
@@ -19,7 +21,7 @@ include("../packages/phs2.jl")
 getEigenvalues = true
 
 # Switch to use alternate ODE function
-useAlternateODEfunction = true
+useAlternateODEfunction = false
 
 # Wave speed
 c = 1/8
@@ -126,14 +128,14 @@ end
 
 # Initialize main solution array U
 
-x0 = 0.1
-y0 = 0.2
+x0 = 0.2
+y0 = 0.4
 if useAlternateODEfunction
     U = zeros(ni+n+n)
-    U[1:ni] = exp.(-20*((x[ii] .- x0) .^ 2 .+ (y[ii] .- y0) .^ 2))
+    U[1:ni] = exp.(-40*((x[ii] .- x0) .^ 2 .+ (y[ii] .- y0) .^ 2))
 else
     U = zeros(length(x), 3)
-    U[:,1] = exp.(-20*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
+    U[:,1] = exp.(-40*((x .- x0) .^ 2 .+ (y .- y0) .^ 2))
 end
 
 #####################################################################

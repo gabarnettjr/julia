@@ -53,7 +53,7 @@ with open(instr + 'y.txt') as f:
 
 # plot the nodes and save them
 fig = plt.figure(figsize = (12, 10))
-plt.plot(x, y, '.')
+plt.plot(x, y, '.', markersize = 1)
 plt.axis('equal')
 fig.savefig(outstr + 'nodes.png', bbox_inches = 'tight')
 plt.close()

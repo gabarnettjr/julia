@@ -17,11 +17,20 @@ include("../packages/rk.jl")
 
 # USER INPUT
 
-# Number of layers of radial nodes on the unit disk (odd number)
-layers = 17
+# The radius of the circle, in meters
+radius = 10
 
-# Set how much the nodes will be perturbed
-ptb = 0
+# Number of layers of radial nodes on the unit disk (odd number)
+layers = 33
+
+# How big the opening is on the left, where air flows in to the room
+thetaIn = pi / 12
+
+# How big the opening is on the right, where air flows out of the room
+thetaOut = thetaIn
+
+# The angle where the out-flow opening is located
+outFlow = pi / 4
 
 # Delta t
 dt = 2^-10 / (layers - 1)
@@ -56,6 +65,10 @@ t = range(0, stop=tf, step=dt)
 # Get the nodes on the unit disk
 x, y = makeRadialNodes(layers)
 
+# Expand the circle so it has a radius of 10 meters instead of 1
+x = radius * x
+y = radius * y
+
 # Set the hyperviscosity coefficient
 if K == 2
     a = 0
@@ -64,27 +77,45 @@ else
     error("K should be 2.")
 end
 
-# Index of the boundary nodes
-bb = abs.(x .^ 2 .+ y .^ 2) .> (1 - 1e-6)
+# Index of the boundary nodes where air is flowing IN (bb1), and where air
+# is NOT allowed to flow out (bb2 and bb3), and everywhere else (ii)
+bb1 = []
+bb2 = []
+bb3 = []
+ii = []
+for i in 1 : length(x)
+    global bb1, bb2, bb3, ii
+    theTan = atan(y[i], x[i])
+    if sqrt(x[i] ^ 2 + y[i] ^ 2) > (radius - 1e-3) &&
+    theTan > pi - thetaIn/2 && theTan < pi + thetaIn/2
+        bb1 = vcat(bb1, i)
+    elseif sqrt(x[i]^2 + y[i]^2) > (radius - 1e-3) &&
+    (theTan > outFlow + thetaOut/2 || theTan < outFlow - thetaOut/2)
+        if theTan > 3*pi/4 && theTan < 5*pi/4 ||
+        theTan > 7*pi/4 || theTan < pi/4
+            bb2 = vcat(bb2, i)
+        else
+            bb3 = vcat(bb3, i)
+        end
+    else
+        ii = vcat(ii, i)
+    end
+end
 
-# Index of the interior nodes
-ii = abs.(x .^ 2 .+ y .^ 2) .< (1 - 1e-6)
-
-# Perturb the nodes by percentage ptb of node spacing
-x, y = perturbNodes!(x, y, layers, ptb, bb)
-
-# Expand the circle so it has a radius of 10 meters instead of 1
-x = 10 * x
-y = 10 * y
-
-# Number of nodes total
-n = length(x)
-
-# Number of interior nodes
-ni = length(x[ii])
-
-# Number of boundary nodes
-nb = length(x[bb])
+# # Test if the index arrays are catching everything
+# foundOne = false
+# for i = 1 : length(x)
+#     global foundOne
+#     if !(i in bb1 || i in bb2 || i in bb3 || i in ii)
+#         println(i)
+#         foundOne = true
+#     end
+# end
+# if foundOne
+#     error("something is wrong.")
+# else
+#     error("everything is good up to this point.")
+# end
 
 # Get all of the DMs that will be needed for the ODE function
 Wx = getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)
@@ -123,8 +154,8 @@ end
 # Define an ODE function which can be passed to rk
 
 odefun! = (t, U, dUdt) ->
-    ODEfunction!(t, U, dUdt, Wx, Wy, aWhv, rho_0, e_0, p_0, bb,
-    mu, k, lam, Cv, R)
+    ODEfunction!(t, U, dUdt,
+    x, y, Wx, Wy, aWhv, rho_0, e_0, p_0, bb1, bb2, bb3, mu, k, lam, Cv, R)
 
 ###############################################################################
 
@@ -193,7 +224,8 @@ function mainLoop(t, U, odefun!, rk!, dt, tf, layers)
         
         # Stop running if the numerical solution blows up
         if (maximum(abs.(U[:,1])) > 10 || maximum(abs.(U[:,2])) > 50 ||
-            maximum(abs.(U[:,3])) > 50 || maximum(abs.(U[:,4])) > 5*10^5)
+            maximum(abs.(U[:,3])) > 50 || maximum(abs.(U[:,4])) > 5*10^5 ||
+            !iszero(isnan.(U)))
             println("It blew up.")
             printAndSave(i, U, -999)
             break
@@ -215,6 +247,10 @@ close(io)
 
 io = open("./results/y.txt", "w")
 writedlm(io, y, ' ')
+close(io)
+
+io = open("./results/t.txt", "w")
+writedlm(io, t, ' ')
 close(io)
 
 ###############################################################################

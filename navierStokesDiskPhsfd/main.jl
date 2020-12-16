@@ -17,6 +17,9 @@ include("../packages/rk.jl")
 
 # USER INPUT
 
+# Final time
+tf = 10
+
 # The radius of the circle, in meters
 radius = 10
 
@@ -24,13 +27,13 @@ radius = 10
 layers = 33
 
 # How big the opening is on the left, where air flows in to the room
-thetaIn = pi / 12
+thetaIn = pi / 6
 
 # How big the opening is on the right, where air flows out of the room
-thetaOut = thetaIn
+thetaOut = pi/6
 
 # The angle where the out-flow opening is located
-outFlow = pi / 4
+outAngle = 0
 
 # Delta t
 dt = 2^-10 / (layers - 1)
@@ -50,9 +53,6 @@ stc = 19
 # Hyperviscosity exponent
 K = 2
 
-# Final time
-tf = 1
-
 ###############################################################################
 
 # Remove old files and remake the results directory
@@ -63,59 +63,75 @@ mkdir("results")
 t = range(0, stop=tf, step=dt)
 
 # Get the nodes on the unit disk
-x, y = makeRadialNodes(layers)
+x, y = makeRadialNodes(layers - 2)
+dr = radius / (layers - 1)
+x = (radius .- 3 ./ 2 .* dr) .* x
+y = (radius .- 3 ./ 2 .* dr) .* y
 
-# Expand the circle so it has a radius of 10 meters instead of 1
-x = radius * x
-y = radius * y
+# Modify the nodes a bit so there are matching layers near the boundary:
+x, y = appendGhostNodes!(x, y, radius, dr)
 
 # Set the hyperviscosity coefficient
 if K == 2
-    a = 0
-    # a = -1/2 / (layers - 1) ^ (2*K-1)
+    # a = 0
+    a = -2^6 * dr ^ (2*K-1)
 else
     error("K should be 2.")
 end
 
-# Index of the boundary nodes where air is flowing IN (bb1), and where air
-# is NOT allowed to flow out (bb2 and bb3), and everywhere else (ii)
-bb1 = []
-bb2 = []
-bb3 = []
-ii = []
-for i in 1 : length(x)
-    global bb1, bb2, bb3, ii
-    theTan = atan(y[i], x[i])
-    if sqrt(x[i] ^ 2 + y[i] ^ 2) > (radius - 1e-3) &&
-    theTan > pi - thetaIn/2 && theTan < pi + thetaIn/2
-        bb1 = vcat(bb1, i)
-    elseif sqrt(x[i]^2 + y[i]^2) > (radius - 1e-3) &&
-    (theTan > outFlow + thetaOut/2 || theTan < outFlow - thetaOut/2)
-        if theTan > 3*pi/4 && theTan < 5*pi/4 ||
-        theTan > 7*pi/4 || theTan < pi/4
-            bb2 = vcat(bb2, i)
-        else
-            bb3 = vcat(bb3, i)
-        end
-    else
-        ii = vcat(ii, i)
-    end
-end
+###############################################################################
 
-# # Test if the index arrays are catching everything
-# foundOne = false
-# for i = 1 : length(x)
-#     global foundOne
-#     if !(i in bb1 || i in bb2 || i in bb3 || i in ii)
-#         println(i)
-#         foundOne = true
-#     end
-# end
-# if foundOne
-#     error("something is wrong.")
-# else
-#     error("everything is good up to this point.")
-# end
+# Get and save all of the indices for the various layers of nodes.
+
+indA,         indB,         indC,
+indA_inflow,  indB_inflow,  indC_inflow,
+indA_outflow, indB_outflow, indC_outflow =
+getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
+
+th = atan.(y, x)
+th = th[indA]
+
+y_inflow = (y[indB_inflow] .+ y[indC_inflow]) ./ 2
+
+ymax = maximum(y_inflow)
+
+io = open("./results/indA.txt", "w")
+writedlm(io, indA, ' ')
+close(io)
+
+io = open("./results/indB.txt", "w")
+writedlm(io, indB, ' ')
+close(io)
+
+io = open("./results/indC.txt", "w")
+writedlm(io, indC, ' ')
+close(io)
+
+io = open("./results/indA_inflow.txt", "w")
+writedlm(io, indA_inflow, ' ')
+close(io)
+
+io = open("./results/indB_inflow.txt", "w")
+writedlm(io, indB_inflow, ' ')
+close(io)
+
+io = open("./results/indC_inflow.txt", "w")
+writedlm(io, indC_inflow, ' ')
+close(io)
+
+io = open("./results/indA_outflow.txt", "w")
+writedlm(io, indA_outflow, ' ')
+close(io)
+
+io = open("./results/indB_outflow.txt", "w")
+writedlm(io, indB_outflow, ' ')
+close(io)
+
+io = open("./results/indC_outflow.txt", "w")
+writedlm(io, indC_outflow, ' ')
+close(io)
+
+###############################################################################
 
 # Get all of the DMs that will be needed for the ODE function
 Wx = getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)
@@ -124,11 +140,27 @@ aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
 
 ###############################################################################
 
-# Initialize main solution array U
+# Initialize main solution array U and save initial conditions.
 
 mu, k, lam, Cv, R = getConstants()
 
 rho_0, u_0, v_0, e_0, p_0 = getInitialConditions(x, Cv, R)
+
+io = open("./results/rho_0.txt", "w")
+writedlm(io, rho_0, ' ')
+close(io)
+
+io = open("./results/u_0.txt", "w")
+writedlm(io, u_0, ' ')
+close(io)
+
+io = open("./results/v_0.txt", "w")
+writedlm(io, v_0, ' ')
+close(io)
+
+io = open("./results/e_0.txt", "w")
+writedlm(io, e_0, ' ')
+close(io)
 
 U = zeros(length(x), 4)
 U[:,1] = rho_0
@@ -155,7 +187,11 @@ end
 
 odefun! = (t, U, dUdt) ->
     ODEfunction!(t, U, dUdt,
-    x, y, Wx, Wy, aWhv, rho_0, e_0, p_0, bb1, bb2, bb3, mu, k, lam, Cv, R)
+    x, y, th, y_inflow, ymax, radius, Wx, Wy, aWhv, rho_0, e_0, p_0,
+    indA, indB, indC,
+    indA_inflow, indB_inflow, indC_inflow,
+    indA_outflow, indB_outflow, indC_outflow,
+    mu, k, lam, Cv, R)
 
 ###############################################################################
 
@@ -203,20 +239,29 @@ end
 
 # The main time-stepping loop
 
-function mainLoop(t, U, odefun!, rk!, dt, tf, layers)
+function mainLoop(t, U, odefun!, rk!, dt, tf, layers,
+th, indA, indB, indC, y_inflow, ymax,
+indA_inflow, indB_inflow, indC_inflow,
+indA_outflow, indB_outflow, indC_outflow)
 
     frame = 0
 
     for i in 1 : Int(tf/dt) + 1
 
-        if mod(i-1, 256) == 0
+        if mod(i-1, 2^13) == 0
+            U = freeSlipNoFlux!(U, th, indA, indB, indC)
+            U = inflow!(t[i], U, y_inflow, ymax,
+                        indA_inflow, indB_inflow, indC_inflow)
+            U = outflow!(U, indA_outflow, indB_outflow, indC_outflow)
             # Print some info and save some things
-            printAndSave(i, U, frame)
+            @time begin
+                printAndSave(i, U, frame)
+            end
             frame = frame + 1
             # Time the Runge-Kutta update
-            @time begin
+            # @time begin
                 U = rk!(t[i], U, odefun!)
-            end
+            # end
         else
             # Just update the array U to the next time level
             U = rk!(t[i], U, odefun!)
@@ -235,7 +280,10 @@ function mainLoop(t, U, odefun!, rk!, dt, tf, layers)
     
 end
 
-mainLoop(t, U, odefun!, rk!, dt, tf, layers)
+mainLoop(t, U, odefun!, rk!, dt, tf, layers,
+         th, indA, indB, indC, y_inflow, ymax,
+         indA_inflow, indB_inflow, indC_inflow,
+         indA_outflow, indB_outflow, indC_outflow)
 
 ###############################################################################
 
@@ -247,6 +295,10 @@ close(io)
 
 io = open("./results/y.txt", "w")
 writedlm(io, y, ' ')
+close(io)
+
+io = open("./results/radius.txt", "w")
+writedlm(io, radius, ' ')
 close(io)
 
 io = open("./results/t.txt", "w")

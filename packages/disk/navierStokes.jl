@@ -3,7 +3,6 @@
 function getConstants()
     
     mu = 1.8 * 10^-5
-    # mu = 0
     
     k = 0
     lam = k - 2/3 * mu
@@ -36,17 +35,164 @@ end
 
 ###############################################################################
 
-function ODEfunction!(t, U, dUdt,
-x, y, Wx, Wy, aWhv, rho_0, e_0, p_0, bb1, bb2, bb3, mu, k, lam, Cv, R)
+function appendGhostNodes!(x, y, radius, dr)
+
+    xb = []
+    yb = []
+
+    for i in 1 : length(x)
+        if abs(sqrt(x[i]^2 + y[i]^2) - (radius - 3/2*dr)) < 1e-3
+            xb = vcat(xb, x[i])
+            yb = vcat(yb, y[i])
+        end
+    end
+
+    th = atan.(yb, xb)
+
+    x = vcat(x, xb .+ dr .* cos.(th))
+    y = vcat(y, yb .+ dr .* sin.(th))
+
+    x = vcat(x, xb .+ 2 .* dr .* cos.(th))
+    y = vcat(y, yb .+ 2 .* dr .* sin.(th))
+
+    return x, y
+
+end
+
+###############################################################################
+
+function getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
     
+    indA = []
+    indB = []
+    indC = []
+    indA_inflow = []
+    indB_inflow = []
+    indC_inflow = []
+    indA_outflow = []
+    indB_outflow = []
+    indC_outflow = []
+    
+    for i in 1 : length(x)
+    
+        r = sqrt(x[i] ^2 + y[i] ^2)
+        th = atan(y[i], x[i])
+        
+        if abs(r - (radius+dr/2)) < 1e-3
+
+            if (th > pi - thetaIn/2 || th < -pi + thetaIn/2)
+                indC_inflow = vcat(indC_inflow, i)
+            elseif (th > outAngle + thetaOut/2 || th < outAngle - thetaOut/2)
+                indC = vcat(indC, i)
+            else
+                indC_outflow = vcat(indC_outflow, i)
+            end
+            
+        elseif abs(r - (radius-dr/2)) < 1e-3
+
+            if (th > pi - thetaIn/2 || th < -pi + thetaIn/2)
+                indB_inflow = vcat(indB_inflow, i)
+            elseif (th > outAngle + thetaOut/2 || th < outAngle - thetaOut/2)
+                indB = vcat(indB, i)
+            else
+                indB_outflow = vcat(indB_outflow, i)
+            end
+
+        elseif abs(r - (radius-3*dr/2)) < 1e-3
+
+            if (th > pi - thetaIn/2 || th < -pi + thetaIn/2)
+                indA_inflow = vcat(indA_inflow, i)
+            elseif (th > outAngle + thetaOut/2 || th < outAngle - thetaOut/2)
+                indA = vcat(indA, i)
+            else
+                indA_outflow = vcat(indA_outflow, i)
+            end
+
+        end
+    
+    end
+
+    return indA,         indB,         indC,
+           indA_inflow,  indB_inflow,  indC_inflow,
+           indA_outflow, indB_outflow, indC_outflow
+
+end
+
+###############################################################################
+
+function freeSlipNoFlux!(U, th, indA, indB, indC, rho_0, e_0)
+
+    # # Dirichlet conditions for density and energy?
+    # U[indC,1] .= 2 .* rho_0[indC] .- U[indB,1]
+    # U[indC,4] .= 2 .* e_0[indC] .- U[indB,4]
+    
+    # Start by just extrapolating everything to the ghost nodes:
+    U[indC,:] = 2 .* U[indB,:] .- U[indA,:]
+
+    # Get the tangent velocity on the two non-ghost levels:
+    uthA = -sin.(th) .* U[indA,2] .+ cos.(th) .* U[indA,3]
+    uthB = -sin.(th) .* U[indB,2] .+ cos.(th) .* U[indB,3]
+
+    # Linear extrapolation of the tangent velocity to the ghost nodes:
+    uthC = 2 .* uthB .- uthA
+    
+    # Get the normal velocity on the outer-most non-ghost level:
+    urB = cos.(th) .* U[indB,2] .+ sin.(th) .* U[indB,3]
+
+    # Set ghost nodes values to enforce no-flux condition:
+    urC = -urB
+    
+    # Set the values of u and v on the ghost nodes:
+    U[indC,2] = cos.(th) .* urC .- sin.(th) .* uthC
+    U[indC,3] = sin.(th) .* urC .+ cos.(th) .* uthC
+
+    return U
+
+end
+
+###############################################################################
+
+function inflow!(t, U, y_inflow, ymax, indA_inflow, indB_inflow, indC_inflow)
+
+    U[indC_inflow,:] = 2 .* U[indB_inflow,:] .- U[indA_inflow,:]
+    
+    f = 10 .* t .^ 3 ./ (20 .+ t .^ 3)
+
+    f = (exp.(-1 .* y_inflow .^ 2) .- exp(-1 .* ymax .^ 2)) .* f
+
+    U[indC_inflow,2] .= 2 .* f .- U[indB_inflow,2]
+
+    U[indC_inflow,3] .= -U[indB_inflow,3]
+
+    return U
+
+end
+
+###############################################################################
+
+function outflow!(U, indA_outflow, indB_outflow, indC_outflow)
+
+    U[indC_outflow,:] = 2 .* U[indB_outflow,:] .- U[indA_outflow,:]
+
+    return U
+
+end
+
+###############################################################################
+
+function ODEfunction!(t, U, dUdt,
+x, y, th, y_inflow, ymax, radius, Wx, Wy, aWhv, rho_0, e_0, p_0,
+indA, indB, indC,
+indA_inflow, indB_inflow, indC_inflow,
+indA_outflow, indB_outflow, indC_outflow,
+mu, k, lam, Cv, R)
+    
+    U = freeSlipNoFlux!(U, th, indA, indB, indC, rho_0, e_0)
+    U = inflow!(t, U, y_inflow, ymax, indA_inflow, indB_inflow, indC_inflow)
+    U = outflow!(U, indA_outflow, indB_outflow, indC_outflow)
+
     T = U[:,4] ./ Cv
     p = U[:,1] .* R .* T
-
-    # Boundary conditions
-    U[bb1, 2] = exp.(-9 .* y[bb1] .^ 2) .* 10 .* t.^3 ./ (20 .+ t.^3)
-    U[bb1, 3] .= 0
-    U[bb2, 2] = -y[bb2] ./ x[bb2] .* U[bb2, 3]
-    U[bb3, 3] = -x[bb3] ./ y[bb3] .* U[bb3, 2]
 
     dudx = Wx * U[:,2]
     dudy = Wy * U[:,2]
@@ -59,47 +205,34 @@ x, y, Wx, Wy, aWhv, rho_0, e_0, p_0, bb1, bb2, bb3, mu, k, lam, Cv, R)
                  aWhv * (U[:,1] - rho_0)
     
     dUdt[:,2] = -U[:,2] .* dudx .- U[:,3] .* dudy .-
-                 1 ./ U[:,1] .* (Wx * (p - p_0) .-
-                 Wx * (lam .* (dudx .+ dvdy)) .-
-                 Wx * (mu .* 2 .* dudx) .-
-                 Wy * (mu .* (dvdx .+ dudy)))
-                 # aWhv * U[:,2]
+                 1 ./ U[:,1] .* (Wx * (p - p_0)) .+
+                 # Wx * (lam .* (dudx .+ dvdy)) .-
+                 # Wx * (mu .* 2 .* dudx) .-
+                 # Wy * (mu .* (dvdx .+ dudy)))
+                 aWhv * U[:,2]
     
     dUdt[:,3] = -U[:,2] .* dvdx .- U[:,3] .* dvdy .-
-                 1 ./ U[:,1] .* (Wy * (p - p_0) .-
-                 Wy * (lam .* (dudx .+ dvdy)) .-
-                 Wx * (mu .* (dudy .+ dvdx)) .-
-                 Wy * (mu .* 2 .* dvdy))
-                 # aWhv * U[:,3]
+                 1 ./ U[:,1] .* (Wy * (p - p_0)) .+
+                 # Wy * (lam .* (dudx .+ dvdy)) .-
+                 # Wx * (mu .* (dudy .+ dvdx)) .-
+                 # Wy * (mu .* 2 .* dvdy))
+                 aWhv * U[:,3]
     
     dUdt[:,4] = -U[:,2] .* (Wx * (U[:,4] - e_0)) .-
                  U[:,3] .* (Wy * (U[:,4] - e_0)) .-
-                 1 ./ U[:,1] .* (p .* (dudx .+ dvdy) .-
+                 1 ./ U[:,1] .* (p .* (dudx .+ dvdy)) .+
                  # Wx * (k .* (Wx*T)) .-
                  # Wy * (k .* (Wy*T)) .-
-                 lam .* (dudx.^2 .+ dvdy.^2)) .+
-                 mu ./ U[:,1] .* (2 .* dudx.^2 .+
-                 (dudy .+ dvdx) .* dvdx .+
-                 (dvdx .+ dudy) .* dudy .+
-                 2 .* dvdy.^2) .+
+                 # lam .* (dudx.^2 .+ dvdy.^2)) .+
+                 # mu ./ U[:,1] .* (2 .* dudx.^2 .+
+                 # (dudy .+ dvdx) .* dvdx .+
+                 # (dvdx .+ dudy) .* dudy .+
+                 # 2 .* dvdy.^2) .+
                  aWhv * (U[:,4] - e_0)
 
-    # in-flow boundary condition
-    dUdt[bb1, 2] = exp.(-9 .* y[bb1] .^ 2) .* 600 .* t.^2 ./ (20 .+ t.^3) .^ 2
-    dUdt[bb1, 3] .= 0
-    # dUdt[bb1, 2] .= 0
-
-    # no-flux boundary condition
-    dUdt[bb2, 2] = -y[bb2] ./ x[bb2] .* dUdt[bb2, 3]
-    dUdt[bb3, 3] = -x[bb3] ./ y[bb3] .* dUdt[bb3, 2]
-    # dUdt[bb2, 2:3] .= 0
-    # dUdt[bb3, 2:3] .= 0
-
-    # Dirichlet boundary condition
-    # dUdt[bb2, 1] .= 0
-    # dUdt[bb3, 1] .= 0
-    # dUdt[bb2, 4] .= 0
-    # dUdt[bb3, 4] .= 0
+    dUdt[indC,:] .= 0
+    dUdt[indC_inflow,:] .= 0
+    dUdt[indC_outflow,:] .= 0
 
     return dUdt
     

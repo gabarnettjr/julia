@@ -18,7 +18,7 @@ include("../packages/rk.jl")
 # USER INPUT
 
 # Final time
-tf = 10
+tf = 20
 
 # The radius of the circle, in meters
 radius = 10
@@ -27,16 +27,16 @@ radius = 10
 layers = 33
 
 # How big the opening is on the left, where air flows in to the room
-thetaIn = pi / 6
+thetaIn = 0
 
 # How big the opening is on the right, where air flows out of the room
-thetaOut = pi/6
+thetaOut = 0
 
 # The angle where the out-flow opening is located
-outAngle = 0
+outAngle = pi/4
 
 # Delta t
-dt = 2^-10 / (layers - 1)
+dt = 2^-9 / (layers - 1)
 
 # Runge-Kutta stages
 rkstages = 3
@@ -64,17 +64,21 @@ t = range(0, stop=tf, step=dt)
 
 # Get the nodes on the unit disk
 x, y = makeRadialNodes(layers - 2)
-dr = radius / (layers - 1)
-x = (radius .- 3 ./ 2 .* dr) .* x
-y = (radius .- 3 ./ 2 .* dr) .* y
+dr = 1 / (layers - 3)
 
 # Modify the nodes a bit so there are matching layers near the boundary:
-x, y = appendGhostNodes!(x, y, radius, dr)
+x, y = appendGhostNodes!(x, y, dr)
+
+# Scale the nodes so the radius is correct (nearly):
+x = radius .* x
+y = radius .* y
+dr = sqrt((x[1] - x[2])^2 + (y[1] - y[2])^2)
+radius = radius + 3 ./ 2 .* dr
 
 # Set the hyperviscosity coefficient
 if K == 2
     # a = 0
-    a = -2^6 * dr ^ (2*K-1)
+    a = -2^5 * dr ^ (2*K-1)
 else
     error("K should be 2.")
 end
@@ -85,13 +89,15 @@ end
 
 indA,         indB,         indC,
 indA_inflow,  indB_inflow,  indC_inflow,
-indA_outflow, indB_outflow, indC_outflow =
+indA_outflow, indB_outflow, indC_outflow,
+indFan =
 getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
 
 th = atan.(y, x)
 th = th[indA]
 
-y_inflow = (y[indB_inflow] .+ y[indC_inflow]) ./ 2
+# y_inflow = (y[indB_inflow] .+ y[indC_inflow]) ./ 2
+y_inflow = y[indFan]
 
 ymax = maximum(y_inflow)
 
@@ -129,6 +135,10 @@ close(io)
 
 io = open("./results/indC_outflow.txt", "w")
 writedlm(io, indC_outflow, ' ')
+close(io)
+
+io = open("./results/indFan.txt", "w")
+writedlm(io, indFan, ' ')
 close(io)
 
 ###############################################################################
@@ -191,6 +201,7 @@ odefun! = (t, U, dUdt) ->
     indA, indB, indC,
     indA_inflow, indB_inflow, indC_inflow,
     indA_outflow, indB_outflow, indC_outflow,
+    indFan,
     mu, k, lam, Cv, R)
 
 ###############################################################################
@@ -233,6 +244,18 @@ function printAndSave(i, U, frame)
     writedlm(io, U[:,4], ' ')
     close(io)
 
+    stop = false
+
+    # Stop running if the numerical solution blows up
+    if (maximum(abs.(U[:,1])) > 10 || maximum(abs.(U[:,2])) > 50 ||
+        maximum(abs.(U[:,3])) > 50 || maximum(abs.(U[:,4])) > 5*10^5 ||
+        !iszero(isnan.(U)))
+        println("It blew up.")
+        stop = true
+    end
+
+    return stop
+
 end
 
 ###############################################################################
@@ -242,20 +265,25 @@ end
 function mainLoop(t, U, odefun!, rk!, dt, tf, layers,
 th, indA, indB, indC, y_inflow, ymax,
 indA_inflow, indB_inflow, indC_inflow,
-indA_outflow, indB_outflow, indC_outflow)
+indA_outflow, indB_outflow, indC_outflow,
+indFan)
 
     frame = 0
 
     for i in 1 : Int(tf/dt) + 1
 
-        if mod(i-1, 2^13) == 0
+        if mod(i-1, 2^12) == 0
             U = freeSlipNoFlux!(U, th, indA, indB, indC)
-            U = inflow!(t[i], U, y_inflow, ymax,
-                        indA_inflow, indB_inflow, indC_inflow)
-            U = outflow!(U, indA_outflow, indB_outflow, indC_outflow)
+            U = fan!(t[i], U, y_inflow, ymax, indFan)
+            # U = inflow!(t[i], U, y_inflow, ymax,
+            #             indA_inflow, indB_inflow, indC_inflow)
+            # U = outflow!(U, indA_outflow, indB_outflow, indC_outflow)
             # Print some info and save some things
             @time begin
-                printAndSave(i, U, frame)
+                stop = printAndSave(i, U, frame)
+            end
+            if stop
+                break
             end
             frame = frame + 1
             # Time the Runge-Kutta update
@@ -267,14 +295,14 @@ indA_outflow, indB_outflow, indC_outflow)
             U = rk!(t[i], U, odefun!)
         end
         
-        # Stop running if the numerical solution blows up
-        if (maximum(abs.(U[:,1])) > 10 || maximum(abs.(U[:,2])) > 50 ||
-            maximum(abs.(U[:,3])) > 50 || maximum(abs.(U[:,4])) > 5*10^5 ||
-            !iszero(isnan.(U)))
-            println("It blew up.")
-            printAndSave(i, U, -999)
-            break
-        end
+        # # Stop running if the numerical solution blows up
+        # if (maximum(abs.(U[:,1])) > 10 || maximum(abs.(U[:,2])) > 50 ||
+        #     maximum(abs.(U[:,3])) > 50 || maximum(abs.(U[:,4])) > 5*10^5 ||
+        #     !iszero(isnan.(U)))
+        #     println("It blew up.")
+        #     printAndSave(i, U, -999)
+        #     break
+        # end
 
     end
     
@@ -283,7 +311,8 @@ end
 mainLoop(t, U, odefun!, rk!, dt, tf, layers,
          th, indA, indB, indC, y_inflow, ymax,
          indA_inflow, indB_inflow, indC_inflow,
-         indA_outflow, indB_outflow, indC_outflow)
+         indA_outflow, indB_outflow, indC_outflow,
+         indFan)
 
 ###############################################################################
 

@@ -35,13 +35,13 @@ end
 
 ###############################################################################
 
-function appendGhostNodes!(x, y, radius, dr)
+function appendGhostNodes!(x, y, dr)
 
     xb = []
     yb = []
 
     for i in 1 : length(x)
-        if abs(sqrt(x[i]^2 + y[i]^2) - (radius - 3/2*dr)) < 1e-3
+        if abs(sqrt(x[i]^2 + y[i]^2) - 1) < 1e-3
             xb = vcat(xb, x[i])
             yb = vcat(yb, y[i])
         end
@@ -72,6 +72,10 @@ function getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
     indA_outflow = []
     indB_outflow = []
     indC_outflow = []
+    indFan = []
+    
+    nLayers = Int(round((radius + dr/2) / dr / 2))
+    halfRad = radius + dr/2 - nLayers * dr
     
     for i in 1 : length(x)
     
@@ -82,7 +86,7 @@ function getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
 
             if (th > pi - thetaIn/2 || th < -pi + thetaIn/2)
                 indC_inflow = vcat(indC_inflow, i)
-            elseif (th > outAngle + thetaOut/2 || th < outAngle - thetaOut/2)
+            elseif (th >= outAngle + thetaOut/2 || th <= outAngle - thetaOut/2)
                 indC = vcat(indC, i)
             else
                 indC_outflow = vcat(indC_outflow, i)
@@ -92,7 +96,7 @@ function getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
 
             if (th > pi - thetaIn/2 || th < -pi + thetaIn/2)
                 indB_inflow = vcat(indB_inflow, i)
-            elseif (th > outAngle + thetaOut/2 || th < outAngle - thetaOut/2)
+            elseif (th >= outAngle + thetaOut/2 || th <= outAngle - thetaOut/2)
                 indB = vcat(indB, i)
             else
                 indB_outflow = vcat(indB_outflow, i)
@@ -102,11 +106,15 @@ function getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
 
             if (th > pi - thetaIn/2 || th < -pi + thetaIn/2)
                 indA_inflow = vcat(indA_inflow, i)
-            elseif (th > outAngle + thetaOut/2 || th < outAngle - thetaOut/2)
+            elseif (th >= outAngle + thetaOut/2 || th <= outAngle - thetaOut/2)
                 indA = vcat(indA, i)
             else
                 indA_outflow = vcat(indA_outflow, i)
             end
+        
+        elseif abs(r - halfRad) < 1e-3 && (th > 11*pi/12 || th < -11*pi/12)
+
+            indFan = vcat(indFan, i)
 
         end
     
@@ -114,18 +122,15 @@ function getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
 
     return indA,         indB,         indC,
            indA_inflow,  indB_inflow,  indC_inflow,
-           indA_outflow, indB_outflow, indC_outflow
+           indA_outflow, indB_outflow, indC_outflow,
+           indFan
 
 end
 
 ###############################################################################
 
-function freeSlipNoFlux!(U, th, indA, indB, indC, rho_0, e_0)
+function freeSlipNoFlux!(U, th, indA, indB, indC)
 
-    # # Dirichlet conditions for density and energy?
-    # U[indC,1] .= 2 .* rho_0[indC] .- U[indB,1]
-    # U[indC,4] .= 2 .* e_0[indC] .- U[indB,4]
-    
     # Start by just extrapolating everything to the ghost nodes:
     U[indC,:] = 2 .* U[indB,:] .- U[indA,:]
 
@@ -156,9 +161,9 @@ function inflow!(t, U, y_inflow, ymax, indA_inflow, indB_inflow, indC_inflow)
 
     U[indC_inflow,:] = 2 .* U[indB_inflow,:] .- U[indA_inflow,:]
     
-    f = 10 .* t .^ 3 ./ (20 .+ t .^ 3)
+    f = 10 .* t .^ 3 ./ (1 .+ t .^ 3)
 
-    f = (exp.(-1 .* y_inflow .^ 2) .- exp(-1 .* ymax .^ 2)) .* f
+    # f = (exp.(-1 .* y_inflow .^ 2) .- exp(-1 .* ymax .^ 2)) .* f
 
     U[indC_inflow,2] .= 2 .* f .- U[indB_inflow,2]
 
@@ -180,19 +185,35 @@ end
 
 ###############################################################################
 
+function fan!(t, U, y_inflow, ymax, indFan)
+    
+    f = 10 .* t .^ 3 ./ (1 .+ t .^ 3)
+    # f = (exp.(-1 .* y_inflow .^ 2) .- exp(-1 .* ymax .^ 2)) .* f
+
+    U[indFan,2] .= f
+    U[indFan,3] .= 0
+
+    return U
+
+end
+
+###############################################################################
+
 function ODEfunction!(t, U, dUdt,
 x, y, th, y_inflow, ymax, radius, Wx, Wy, aWhv, rho_0, e_0, p_0,
 indA, indB, indC,
 indA_inflow, indB_inflow, indC_inflow,
 indA_outflow, indB_outflow, indC_outflow,
+indFan,
 mu, k, lam, Cv, R)
     
-    U = freeSlipNoFlux!(U, th, indA, indB, indC, rho_0, e_0)
-    U = inflow!(t, U, y_inflow, ymax, indA_inflow, indB_inflow, indC_inflow)
-    U = outflow!(U, indA_outflow, indB_outflow, indC_outflow)
+    U = freeSlipNoFlux!(U, th, indA, indB, indC)
+    U = fan!(t, U, y_inflow, ymax, indFan)
+    # U = inflow!(t, U, y_inflow, ymax, indA_inflow, indB_inflow, indC_inflow)
+    # U = outflow!(U, indA_outflow, indB_outflow, indC_outflow)
 
-    T = U[:,4] ./ Cv
-    p = U[:,1] .* R .* T
+    # T = U[:,4] ./ Cv
+    p = U[:,1] .* R .* U[:,4] ./ Cv
 
     dudx = Wx * U[:,2]
     dudy = Wy * U[:,2]
@@ -231,8 +252,10 @@ mu, k, lam, Cv, R)
                  aWhv * (U[:,4] - e_0)
 
     dUdt[indC,:] .= 0
-    dUdt[indC_inflow,:] .= 0
-    dUdt[indC_outflow,:] .= 0
+    dUdt[indFan,2] .= 0
+    dUdt[indFan,3] .= 0
+    # dUdt[indC_inflow,:] .= 0
+    # dUdt[indC_outflow,:] .= 0
 
     return dUdt
     

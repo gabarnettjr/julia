@@ -25,10 +25,15 @@ varstr = instr + whatToPlot
 outstr = 'figures/'
 
 # Set the contour levels
-if whatToPlot == "u":
-    clevels = np.arange(-4.75, 10.75, .5)
+if whatToPlot == "rho":
+    clevels = np.arange(-72.5, 97.5, 5) * 1e-5
+elif (whatToPlot == "u") or (whatToPlot == "v"):
+    clevels = np.arange(-10.25, 11.25, .5)
+    # clevels = np.arange(-.205, .205, .01)
+elif whatToPlot == "e":
+    clevels = np.arange(-41, 71, 2)
 else:
-    clevels = 20
+    sys.exit("Invalid thing to plot.")
 
 #####################################################################
 
@@ -50,12 +55,6 @@ y = np.array([], float)
 with open(instr + 'y.txt') as f:
     for line in f:
         y = np.hstack((y, np.float(line)))
-
-# # Load the angles near the boundary
-# th = np.array([], float)
-# with open(instr + 'th.txt') as f:
-#     for line in f:
-#         th = np.hstack((th, np.float(line)))
 
 # Load the radius of the boundary of the disk
 radius = np.array([], float)
@@ -113,6 +112,11 @@ with open(instr + 'indC_outflow.txt') as f:
     for line in f:
         indC_outflow = np.hstack((indC_outflow, np.int(line) - 1))
 
+indFan = np.array([], int)
+with open(instr + 'indFan.txt') as f:
+    for line in f:
+        indFan = np.hstack((indFan, np.int(line) - 1))
+
 th = np.linspace(0, 2*np.pi, 500)
 
 fig = plt.figure(figsize = (12, 10))
@@ -127,6 +131,7 @@ plt.plot(x, y, 'k.', \
          x[indA], y[indA], 'rs', \
          x[indB], y[indB], 'gs', \
          x[indC], y[indC], 'ys', \
+         x[indFan], y[indFan], 'bs', \
          markersize = 5)
 plt.axis('equal')
 fig.savefig(outstr + 'nodes.png', bbox_inches = 'tight')
@@ -199,7 +204,7 @@ while True:
             sys.exit("Not a valid thing to  plot.")
         fig.colorbar(cs)
         plt.axis('equal')
-        plt.axis(10.1 * np.array([-1,1,-1,1]))
+        plt.axis(12 * np.array([-1,1,-1,1]))
         
         fig.savefig(outstr + '{0:04d}'.format(frame) + '.png',
                 bbox_inches = 'tight')

@@ -5,15 +5,17 @@ using DelimitedFiles
 
 ###############################################################################
 
-include("../packages/disk/nodes.jl")
-
-include("../packages/disk/navierStokes.jl")
-
+include("../packages/nodes/disk/makeRadialNodes.jl")
+include("../packages/nodes/disk/appendGhostNodes.jl")
+include("../packages/eulerEquations/getConstants.jl")
+include("../packages/eulerEquations/getInitialConditions.jl")
+include("../packages/eulerEquations/eulerian/ODEfunction.jl")
+include("../packages/eulerEquations/eulerian/disk/getIndices.jl")
+include("../packages/eulerEquations/eulerian/disk/freeSlipNoFlux.jl")
 include("../packages/phs2.jl")
-
-include("../packages/rk.jl")
-
-include("../packages/adamsBashforth.jl")
+include("../packages/timeStepping/explicit/rk/rk3.jl")
+include("../packages/timeStepping/explicit/rk/rk4.jl")
+include("../packages/timeStepping/explicit/ab/ab3.jl")
 
 ###############################################################################
 
@@ -27,15 +29,6 @@ radius = 10
 
 # Number of layers of radial nodes on the unit disk (odd number)
 layers = 33
-
-# How big the opening is on the left, where air flows in to the room
-thetaIn = 0
-
-# How big the opening is on the right, where air flows out of the room
-thetaOut = 0
-
-# The angle where the out-flow opening is located
-outAngle = pi/4
 
 # Delta t
 dt = 2^-10 / (layers - 1)
@@ -89,19 +82,10 @@ end
 
 # Get and save all of the indices for the various layers of nodes.
 
-indA,         indB,         indC,
-indA_inflow,  indB_inflow,  indC_inflow,
-indA_outflow, indB_outflow, indC_outflow,
-indFan =
-getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
+indA, indB, indC = getIndices(x, y, dr, radius)
 
 th = atan.(y, x)
 th = th[indA]
-
-# y_inflow = (y[indB_inflow] .+ y[indC_inflow]) ./ 2
-y_inflow = y[indFan]
-
-ymax = maximum(y_inflow)
 
 io = open("./results/indA.txt", "w")
 writedlm(io, indA, ' ')
@@ -113,34 +97,6 @@ close(io)
 
 io = open("./results/indC.txt", "w")
 writedlm(io, indC, ' ')
-close(io)
-
-io = open("./results/indA_inflow.txt", "w")
-writedlm(io, indA_inflow, ' ')
-close(io)
-
-io = open("./results/indB_inflow.txt", "w")
-writedlm(io, indB_inflow, ' ')
-close(io)
-
-io = open("./results/indC_inflow.txt", "w")
-writedlm(io, indC_inflow, ' ')
-close(io)
-
-io = open("./results/indA_outflow.txt", "w")
-writedlm(io, indA_outflow, ' ')
-close(io)
-
-io = open("./results/indB_outflow.txt", "w")
-writedlm(io, indB_outflow, ' ')
-close(io)
-
-io = open("./results/indC_outflow.txt", "w")
-writedlm(io, indC_outflow, ' ')
-close(io)
-
-io = open("./results/indFan.txt", "w")
-writedlm(io, indFan, ' ')
 close(io)
 
 ###############################################################################
@@ -160,7 +116,7 @@ aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K;
 
 # Initialize main solution array U and save initial conditions.
 
-mu, k, lam, Cv, R = getConstants()
+Cv, R = getConstants()
 
 rho_0, u_0, v_0, e_0, p_0 = getInitialConditions(x, Cv, R)
 
@@ -188,7 +144,7 @@ U[:,4] = e_0
 
 ###############################################################################
 
-# Initialize dummy arrays to be used in Runge-Kutta
+# Initialize dummy arrays to be used in Runge-Kutta and Adams-Bashforth
 
 q1 = zeros(size(U))                                        #needed in all cases
 q2 = zeros(size(U))                                     #needed for rk3 and rk4
@@ -209,21 +165,18 @@ f3 = zeros(size(U))                                             #needed for AB3
 
 odefun! = (t, U, dUdt) ->
     ODEfunction!(t, U, dUdt,
-    x, y, th, y_inflow, ymax, radius, Wx, Wy, aWhv, rho_0, e_0, p_0,
-    indA, indB, indC,
-    indA_inflow, indB_inflow, indC_inflow,
-    indA_outflow, indB_outflow, indC_outflow,
-    indFan,
-    mu, k, lam, Cv, R)
+    Wx, Wy, aWhv, rho_0, e_0,
+    th, indA, indB, indC,
+    Cv, R)
 
 ###############################################################################
 
 # Define the Runge-Kutta function based on the number of stages
 
 if rkstages == 3
-	rk! = (t, U, odefun!) -> rk3!(t, U, odefun!, dt, q1, q2)
+	rk! = (t, U) -> rk3!(t, U, odefun!, dt, q1, q2)
 elseif rkstages == 4
-	rk! = (t, U, odefun!) -> rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
+	rk! = (t, U) -> rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
 else
     error("rkstages should be 3 or 4 please.")
 end
@@ -274,34 +227,25 @@ end
 
 # The main time-stepping loop
 
-function mainLoop(t, U, odefun!, rk!, dt, tf, layers,
-th, indA, indB, indC, y_inflow, ymax,
-indA_inflow, indB_inflow, indC_inflow,
-indA_outflow, indB_outflow, indC_outflow,
-indFan, f1, f2, f3, e_0)
+function mainLoop(U, f1, f2, f3)
 
     # Save initial stuff
     frame = 0
-    U = freeSlipNoFlux!(U, th, indA, indB, indC, e_0)
-    U = fan!(t[1], U, y_inflow, ymax, indFan)
+    U = freeSlipNoFlux!(U, th, indA, indB, indC)
     stop = printAndSave(1, U, frame)
     frame = 1
 
     # Do two steps of Runge-Kutta, to get first three time-levels
     f1 = odefun!(t[1], U, f1)
-    U = rk!(t[1], U, odefun!)
+    U = rk!(t[1], U)
     f2 = odefun!(t[2], U, f2)
-    U = rk!(t[2], U, odefun!)
+    U = rk!(t[2], U)
     f3 = odefun!(t[3], U, f3)
 
     for i in 3 : Int(tf/dt) + 1
 
         if mod(i-1, 2^7) == 0
-            U = freeSlipNoFlux!(U, th, indA, indB, indC, e_0)
-            # U = fan!(t[i], U, y_inflow, ymax, indFan)
-            # U = inflow!(t[i], U, y_inflow, ymax,
-            #             indA_inflow, indB_inflow, indC_inflow)
-            # U = outflow!(U, indA_outflow, indB_outflow, indC_outflow)
+            U = freeSlipNoFlux!(U, th, indA, indB, indC)
             # Print some info and save some things
             stop = printAndSave(i, U, frame)
             if stop
@@ -311,23 +255,17 @@ indFan, f1, f2, f3, e_0)
             # Time the update
             @time begin
                 U, f1, f2, f3 = ab3!(t[i], U, odefun!, dt, f1, f2, f3)
-                # U = rk!(t[i], U, odefun!)
             end
         else
             # Just step forward in time
             U, f1, f2, f3 = ab3!(t[i], U, odefun!, dt, f1, f2, f3)
-            # U = rk!(t[i], U, odefun!)
         end
 
     end
     
 end
 
-mainLoop(t, U, odefun!, rk!, dt, tf, layers,
-         th, indA, indB, indC, y_inflow, ymax,
-         indA_inflow, indB_inflow, indC_inflow,
-         indA_outflow, indB_outflow, indC_outflow,
-         indFan, f1, f2, f3, e_0)
+mainLoop(U, f1, f2, f3)
 
 ###############################################################################
 

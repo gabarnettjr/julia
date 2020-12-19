@@ -88,56 +88,14 @@ with open(instr + 'indC.txt') as f:
     for line in f:
         indC = np.hstack((indC, np.int(line) - 1))
 
-indA_inflow = np.array([], int)
-with open(instr + 'indA_inflow.txt') as f:
-    for line in f:
-        indA_inflow = np.hstack((indA_inflow, np.int(line) - 1))
-
-indB_inflow = np.array([], int)
-with open(instr + 'indB_inflow.txt') as f:
-    for line in f:
-        indB_inflow = np.hstack((indB_inflow, np.int(line) - 1))
-
-indC_inflow = np.array([], int)
-with open(instr + 'indC_inflow.txt') as f:
-    for line in f:
-        indC_inflow = np.hstack((indC_inflow, np.int(line) - 1))
-
-indA_outflow = np.array([], int)
-with open(instr + 'indA_outflow.txt') as f:
-    for line in f:
-        indA_outflow = np.hstack((indA_outflow, np.int(line) - 1))
-
-indB_outflow = np.array([], int)
-with open(instr + 'indB_outflow.txt') as f:
-    for line in f:
-        indB_outflow = np.hstack((indB_outflow, np.int(line) - 1))
-
-indC_outflow = np.array([], int)
-with open(instr + 'indC_outflow.txt') as f:
-    for line in f:
-        indC_outflow = np.hstack((indC_outflow, np.int(line) - 1))
-
-indFan = np.array([], int)
-with open(instr + 'indFan.txt') as f:
-    for line in f:
-        indFan = np.hstack((indFan, np.int(line) - 1))
-
 th = np.linspace(0, 2*np.pi, 250)
 
 fig = plt.figure(figsize = (12, 10))
 plt.plot(x, y, 'k.', \
          radius*np.cos(th), radius*np.sin(th), 'k', \
-         # x[indA_inflow], y[indA_inflow], 'ro', \
-         # x[indB_inflow], y[indB_inflow], 'go', \
-         # x[indC_inflow], y[indC_inflow], 'yo', \
-         # x[indA_outflow], y[indA_outflow], 'rd', \
-         # x[indB_outflow], y[indB_outflow], 'gd', \
-         # x[indC_outflow], y[indC_outflow], 'yd', \
          x[indA], y[indA], 'rs', \
          x[indB], y[indB], 'gs', \
          x[indC], y[indC], 'ys', \
-         # x[indFan], y[indFan], 'bs', \
          markersize = 5, fillstyle = 'none')
 plt.axis('equal')
 fig.savefig(outstr + 'nodes.png', bbox_inches = 'tight')
@@ -212,7 +170,6 @@ while True:
         plt.axis('equal')
         plt.axis(12 * np.array([-1,1,-1,1]))
 
-        # plt.plot(x[indFan], y[indFan], 'k--')
         plt.plot(radius*np.cos(th), radius*np.sin(th), 'k')
         
         fig.savefig(outstr + '{0:04d}'.format(frame) + '.png',

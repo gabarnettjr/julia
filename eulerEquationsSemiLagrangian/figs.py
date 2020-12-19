@@ -25,21 +25,17 @@ varstr = instr + whatToPlot
 outstr = 'figures/'
 
 # Set the contour levels
-if whatToPlot == "rho":
-    # clevels = 20
-    clevels = np.arange(-17, 19, 2) * 1e-3
-elif whatToPlot == "u":
-    # clevels = 20
-    clevels = np.arange(-23, 25, 2) * 1e-1
-    # clevels = np.arange(-11, 13, 2) * 1e-1
-elif whatToPlot == "v":
-    # clevels = 20
-    clevels = np.arange(-65, 75, 10) * 1e-2
-elif whatToPlot == "e":
-    # clevels = 20
-    clevels = np.arange(-1250, 1350, 100)
-else:
-    sys.exit("Invalid thing to plot.")
+clevels = 20
+# if whatToPlot == "rho":
+#     clevels = np.arange(-105, 65, 10) * 1e-5
+# elif whatToPlot == "u":
+#     clevels = np.arange(-12.5, 13.5, 1)
+# elif whatToPlot == "v":
+#     clevels = np.arange(-10.5, 10.5, 1)
+# elif whatToPlot == "e":
+#     clevels = np.arange(-75, 45, 10)
+# else:
+#     sys.exit("Invalid thing to plot.")
 
 #####################################################################
 
@@ -73,55 +69,25 @@ radius = radius[0]
 
 # plot the nodes and save the plot
 
-indA = np.array([], int)
-with open(instr + 'indA.txt') as f:
+ind_ghost = np.array([], int)
+with open(instr + 'ind_ghost.txt') as f:
     for line in f:
-        indA = np.hstack((indA, np.int(line) - 1))
+        ind_ghost = np.hstack((ind_ghost, np.int(line) - 1))
 
-indB = np.array([], int)
-with open(instr + 'indB.txt') as f:
+ind_noGhost = np.array([], int)
+with open(instr + 'ind_noGhost.txt') as f:
     for line in f:
-        indB = np.hstack((indB, np.int(line) - 1))
+        ind_noGhost = np.hstack((ind_noGhost, np.int(line) - 1))
 
-indC = np.array([], int)
-with open(instr + 'indC.txt') as f:
+ind_outer = np.array([], int)
+with open(instr + 'ind_outer.txt') as f:
     for line in f:
-        indC = np.hstack((indC, np.int(line) - 1))
+        ind_outer = np.hstack((ind_outer, np.int(line) - 1))
 
-indA_inflow = np.array([], int)
-with open(instr + 'indA_inflow.txt') as f:
+ind_fan = np.array([], int)
+with open(instr + 'ind_fan.txt') as f:
     for line in f:
-        indA_inflow = np.hstack((indA_inflow, np.int(line) - 1))
-
-indB_inflow = np.array([], int)
-with open(instr + 'indB_inflow.txt') as f:
-    for line in f:
-        indB_inflow = np.hstack((indB_inflow, np.int(line) - 1))
-
-indC_inflow = np.array([], int)
-with open(instr + 'indC_inflow.txt') as f:
-    for line in f:
-        indC_inflow = np.hstack((indC_inflow, np.int(line) - 1))
-
-indA_outflow = np.array([], int)
-with open(instr + 'indA_outflow.txt') as f:
-    for line in f:
-        indA_outflow = np.hstack((indA_outflow, np.int(line) - 1))
-
-indB_outflow = np.array([], int)
-with open(instr + 'indB_outflow.txt') as f:
-    for line in f:
-        indB_outflow = np.hstack((indB_outflow, np.int(line) - 1))
-
-indC_outflow = np.array([], int)
-with open(instr + 'indC_outflow.txt') as f:
-    for line in f:
-        indC_outflow = np.hstack((indC_outflow, np.int(line) - 1))
-
-indFan = np.array([], int)
-with open(instr + 'indFan.txt') as f:
-    for line in f:
-        indFan = np.hstack((indFan, np.int(line) - 1))
+        ind_fan = np.hstack((ind_fan, np.int(line) - 1))
 
 th = np.linspace(0, 2*np.pi, 250)
 
@@ -134,10 +100,9 @@ plt.plot(x, y, 'k.', \
          # x[indA_outflow], y[indA_outflow], 'rd', \
          # x[indB_outflow], y[indB_outflow], 'gd', \
          # x[indC_outflow], y[indC_outflow], 'yd', \
-         x[indA], y[indA], 'rs', \
-         x[indB], y[indB], 'gs', \
-         x[indC], y[indC], 'ys', \
-         # x[indFan], y[indFan], 'bs', \
+         x[ind_outer], y[ind_outer], 'gs', \
+         x[ind_ghost], y[ind_ghost], 'ys', \
+         x[ind_fan], y[ind_fan], 'bs', \
          markersize = 5, fillstyle = 'none')
 plt.axis('equal')
 fig.savefig(outstr + 'nodes.png', bbox_inches = 'tight')
@@ -201,9 +166,9 @@ while True:
         if whatToPlot == "rho":
             cs = ax.tricontourf(triang, var-rho_0, levels = clevels)
         elif whatToPlot == "u":
-            cs = ax.tricontourf(triang, var, levels = clevels)
+            cs = ax.tricontourf(triang, var-u_0, levels = clevels)
         elif whatToPlot == "v":
-            cs = ax.tricontourf(triang, var, levels = clevels)
+            cs = ax.tricontourf(triang, var-v_0, levels = clevels)
         elif whatToPlot == "e":
             cs = ax.tricontourf(triang, var-e_0, levels = clevels)
         else:
@@ -212,7 +177,7 @@ while True:
         plt.axis('equal')
         plt.axis(12 * np.array([-1,1,-1,1]))
 
-        # plt.plot(x[indFan], y[indFan], 'k--')
+        plt.plot(x[ind_fan], y[ind_fan], 'k--')
         plt.plot(radius*np.cos(th), radius*np.sin(th), 'k')
         
         fig.savefig(outstr + '{0:04d}'.format(frame) + '.png',

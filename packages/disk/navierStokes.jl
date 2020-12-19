@@ -18,10 +18,27 @@ end
 function getInitialConditions(x, Cv, R)
     
     T_0 = 300 .* ones(length(x))
+    # T_0 = 15 .* (20 .- x)
     
     e_0 = Cv .* T_0
     
-    p_0 = 10^5 .* ones(length(x))
+    # p_0 = 10^5 .* ones(length(x))
+
+    p_0 = 10^5 .- 100 .* x
+
+    # r = sqrt.(x .^ 2 .+ y .^ 2)
+    # p_0 = 10^5 .+ 100 .* r
+
+    # p_0 = zeros(length(x))
+    # for i = 1 : length(x)
+    #     if x[i] < 0
+    #         p_0[i] = 10^5 + 100
+    #     elseif abs(x[i]) < 1e-3
+    #         p_0[i] = 10^5
+    #     else
+    #         p_0[i] = 10^5 - 100
+    #     end
+    # end
     
     rho_0 = p_0 ./ R ./ T_0
     
@@ -74,8 +91,8 @@ function getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
     indC_outflow = []
     indFan = []
     
-    nLayers = Int(round((radius + dr/2) / dr / 2))
-    halfRad = radius + dr/2 - nLayers * dr
+    nLayers = Int(round((radius + dr/2) / dr / 4))
+    fanRad = radius + dr/2 - nLayers * dr
     
     for i in 1 : length(x)
     
@@ -112,7 +129,7 @@ function getIndices(x, y, dr, radius, thetaIn, thetaOut, outAngle)
                 indA_outflow = vcat(indA_outflow, i)
             end
         
-        elseif abs(r - halfRad) < 1e-3 && (th > 11*pi/12 || th < -11*pi/12)
+        elseif abs(r - fanRad) < 1e-3 && (th >= 11*pi/12 || th <= -11*pi/12)
 
             indFan = vcat(indFan, i)
 
@@ -129,10 +146,13 @@ end
 
 ###############################################################################
 
-function freeSlipNoFlux!(U, th, indA, indB, indC)
+function freeSlipNoFlux!(U, th, indA, indB, indC, e_0)
 
-    # Start by just extrapolating everything to the ghost nodes:
-    U[indC,:] = 2 .* U[indB,:] .- U[indA,:]
+    # Start by just extrapolating the density and energy to the ghost nodes:
+    U[indC,[1,4]] = 2 .* U[indB,[1,4]] .- U[indA,[1,4]]
+
+    # # Enforce a Dirichlet boundary condition on the energy:
+    # U[indC,4] = 2 .* e_0[indC] - U[indB,4]
 
     # Get the tangent velocity on the two non-ghost levels:
     uthA = -sin.(th) .* U[indA,2] .+ cos.(th) .* U[indA,3]
@@ -207,55 +227,49 @@ indA_outflow, indB_outflow, indC_outflow,
 indFan,
 mu, k, lam, Cv, R)
     
-    U = freeSlipNoFlux!(U, th, indA, indB, indC)
-    U = fan!(t, U, y_inflow, ymax, indFan)
+    U = freeSlipNoFlux!(U, th, indA, indB, indC, e_0)
+    # U = fan!(t, U, y_inflow, ymax, indFan)
     # U = inflow!(t, U, y_inflow, ymax, indA_inflow, indB_inflow, indC_inflow)
     # U = outflow!(U, indA_outflow, indB_outflow, indC_outflow)
 
-    # T = U[:,4] ./ Cv
-    p = U[:,1] .* R .* U[:,4] ./ Cv
+    T = U[:,4] ./ Cv
+    p = U[:,1] .* R .* T
 
     dudx = Wx * U[:,2]
     dudy = Wy * U[:,2]
     dvdx = Wx * U[:,3]
     dvdy = Wy * U[:,3]
     
-    dUdt[:,1] = -U[:,2] .* (Wx * (U[:,1] - rho_0)) .-
-                 U[:,3] .* (Wy * (U[:,1] - rho_0)) .-
+    dUdt[:,1] = -U[:,2] .* (Wx * U[:,1]) .-
+                 U[:,3] .* (Wy * U[:,1]) .-
                  U[:,1] .* (dudx .+ dvdy) .+
                  aWhv * (U[:,1] - rho_0)
     
     dUdt[:,2] = -U[:,2] .* dudx .- U[:,3] .* dudy .-
-                 1 ./ U[:,1] .* (Wx * (p - p_0)) .+
-                 # Wx * (lam .* (dudx .+ dvdy)) .-
-                 # Wx * (mu .* 2 .* dudx) .-
-                 # Wy * (mu .* (dvdx .+ dudy)))
+                 (Wx * p) ./ U[:,1] .+
+                 # (Wx * (lam .* (dudx .+ dvdy)) .+
+                 # Wx * (mu .* 2 .* dudx) .+
+                 # Wy * (mu .* (dvdx .+ dudy))) ./ U[:,1] .+
                  aWhv * U[:,2]
     
     dUdt[:,3] = -U[:,2] .* dvdx .- U[:,3] .* dvdy .-
-                 1 ./ U[:,1] .* (Wy * (p - p_0)) .+
-                 # Wy * (lam .* (dudx .+ dvdy)) .-
-                 # Wx * (mu .* (dudy .+ dvdx)) .-
-                 # Wy * (mu .* 2 .* dvdy))
+                 (Wy * p) ./ U[:,1] .+
+                 # (Wy * (lam .* (dudx .+ dvdy)) .+
+                 # Wx * (mu .* (dudy .+ dvdx)) .+
+                 # Wy * (mu .* 2 .* dvdy)) ./ U[:,1] .+
                  aWhv * U[:,3]
     
-    dUdt[:,4] = -U[:,2] .* (Wx * (U[:,4] - e_0)) .-
-                 U[:,3] .* (Wy * (U[:,4] - e_0)) .-
-                 1 ./ U[:,1] .* (p .* (dudx .+ dvdy)) .+
-                 # Wx * (k .* (Wx*T)) .-
-                 # Wy * (k .* (Wy*T)) .-
-                 # lam .* (dudx.^2 .+ dvdy.^2)) .+
-                 # mu ./ U[:,1] .* (2 .* dudx.^2 .+
+    dUdt[:,4] = -U[:,2] .* (Wx * U[:,4]) .-
+                 U[:,3] .* (Wy * U[:,4]) .-
+                 p .* (dudx .+ dvdy) ./ U[:,1] .+
+                 # (Wx * (k .* (Wx*T)) .+
+                 # Wy * (k .* (Wy*T)) .+
+                 # lam .* (dudx.^2 .+ dvdy.^2)) ./ U[:,1] .+
+                 # mu .* (2 .* dudx.^2 .+
                  # (dudy .+ dvdx) .* dvdx .+
                  # (dvdx .+ dudy) .* dudy .+
-                 # 2 .* dvdy.^2) .+
+                 # 2 .* dvdy.^2) ./ U[:,1] .+
                  aWhv * (U[:,4] - e_0)
-
-    dUdt[indC,:] .= 0
-    dUdt[indFan,2] .= 0
-    dUdt[indFan,3] .= 0
-    # dUdt[indC_inflow,:] .= 0
-    # dUdt[indC_outflow,:] .= 0
 
     return dUdt
     

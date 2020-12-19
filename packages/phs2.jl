@@ -240,7 +240,7 @@ end
 
 ###########################################################################
 """
-    getDM(z, x, m, phs, pol, stc, K)
+    getDM(z, x, m, phs, pol, stc, K; tree = KDtree(x), getSparse = true)
 
 # Description
     Uses polyharmonic splines and polynomials to get a sparse
@@ -257,9 +257,10 @@ end
     K   : hyperviscosity exponent
 
 # Output
-    W : sparse differentiation matrix
+    w : differentiation matrix
 """
-function getDM(z, x, m, phs, pol, stc, K)
+function getDM(z, x, m, phs, pol, stc, K;
+               tree = KDTree(x), idx = (), getSparse = true)
     
     Lz = size(z, 2)
     Lx = size(x, 2)
@@ -269,17 +270,20 @@ function getDM(z, x, m, phs, pol, stc, K)
 
     w = zeros(stc, Lz)
 
-    tree = KDTree(x)
-    idx = knn(tree, z, stc)[1]
+    if isempty(idx)
+        idx = knn(tree, z, stc)[1]
+    end
 
     for i in 1:Lz
         jj[:,i] = idx[i]
         w[:,i] = getWeights(z[:,i], x[:,idx[i]], m, phs, pol, K)
     end
 
-    w = sparse(ii[:], jj[:], w[:], Lz, Lx)
+    if getSparse
+        w = sparse(ii[:], jj[:], w[:], Lz, Lx)
+    end
 
-    return w
+    return w, jj, tree, idx
 
 end
 

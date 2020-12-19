@@ -1,15 +1,14 @@
 ###############################################################################
 
-function ab3!(t, U1, U2, U3, odefun!, dt, q1, q2, q3)
+function ab3!(t, U, odefun!, dt, f1, f2, f3)
 
-    U = U3 .+ dt ./ 12 .* (23 .* odefun!(t, U3, q3) .-
-        16 .* odefun!(t-dt, U2, q2) .+ 5 .* odefun!(t-2*dt, U1, q1))
+    U = U .+ dt ./ 12 .* (23 .* f3 .- 16 .* f2 .+ 5 .* f1)
 
-    U1 = U2
-    U2 = U3
-    U3 = U
+    f1 = f2
+    f2 = f3
+    f3 = odefun!(t+dt, U, f3)
 
-    return U1, U2, U3
+    return U, f1, f2, f3
 
 end
 

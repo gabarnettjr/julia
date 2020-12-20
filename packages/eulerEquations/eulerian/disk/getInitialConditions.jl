@@ -2,7 +2,6 @@
 function getInitialConditions(x, Cv, R)
     
     T_0 = 300 .* ones(length(x))
-    # T_0 = 15 .* (20 .- x)
     
     e_0 = Cv .* T_0
     

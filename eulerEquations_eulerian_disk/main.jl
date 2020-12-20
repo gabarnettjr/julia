@@ -8,13 +8,12 @@ using DelimitedFiles
 include("../packages/nodes/disk/makeRadialNodes.jl")
 include("../packages/nodes/disk/appendGhostNodes.jl")
 include("../packages/eulerEquations/getConstants.jl")
-include("../packages/eulerEquations/getInitialConditions.jl")
+include("../packages/eulerEquations/tangentsNormals.jl")
 include("../packages/eulerEquations/eulerian/ODEfunction.jl")
+include("../packages/eulerEquations/eulerian/disk/getInitialConditions.jl")
 include("../packages/eulerEquations/eulerian/disk/getIndices.jl")
-include("../packages/eulerEquations/eulerian/disk/freeSlipNoFlux.jl")
 include("../packages/phs2.jl")
 include("../packages/timeStepping/explicit/rk/rk3.jl")
-include("../packages/timeStepping/explicit/rk/rk4.jl")
 include("../packages/timeStepping/explicit/ab/ab3.jl")
 
 ###############################################################################
@@ -32,9 +31,6 @@ layers = 33
 
 # Delta t
 dt = 2^-10 / (layers - 1)
-
-# Runge-Kutta stages
-rkstages = 3
 
 # Exponent in the polyharmonic spline function
 phs = 5
@@ -83,6 +79,8 @@ end
 # Get and save all of the indices for the various layers of nodes.
 
 indA, indB, indC = getIndices(x, y, dr, radius)
+
+Tx, Ty, Nx, Ny = tangentsNormals((x[indB].+x[indC])./2, (y[indB].+y[indC])./2)
 
 th = atan.(y, x)
 th = th[indA]
@@ -146,14 +144,8 @@ U[:,4] = e_0
 
 # Initialize dummy arrays to be used in Runge-Kutta and Adams-Bashforth
 
-q1 = zeros(size(U))                                        #needed in all cases
-q2 = zeros(size(U))                                     #needed for rk3 and rk4
-q3 = []
-q4 = []
-if rkstages == 4
-    q3 = zeros(size(U))                                         #needed for rk4
-    q4 = zeros(size(U))                                         #needed for rk4
-end
+q1 = zeros(size(U))                                             #needed for RK3
+q2 = zeros(size(U))                                             #needed for RK3
 
 f1 = zeros(size(U))                                             #needed for AB3
 f2 = zeros(size(U))                                             #needed for AB3
@@ -163,23 +155,10 @@ f3 = zeros(size(U))                                             #needed for AB3
 
 # Define an ODE function which can be passed to rk
 
-odefun! = (t, U, dUdt) ->
-    ODEfunction!(t, U, dUdt,
-    Wx, Wy, aWhv, rho_0, e_0,
-    th, indA, indB, indC,
-    Cv, R)
-
-###############################################################################
-
-# Define the Runge-Kutta function based on the number of stages
-
-if rkstages == 3
-	rk! = (t, U) -> rk3!(t, U, odefun!, dt, q1, q2)
-elseif rkstages == 4
-	rk! = (t, U) -> rk4!(t, U, odefun!, dt, q1, q2, q3, q4)
-else
-    error("rkstages should be 3 or 4 please.")
-end
+odefun! = (t, U, dUdt) -> ODEfunction!(t, U, dUdt,
+                                       Wx, Wy, aWhv, rho_0, e_0,
+                                       Tx, Ty, Nx, Ny, indA, indB, indC,
+                                       Cv, R)
 
 ###############################################################################
 
@@ -231,21 +210,21 @@ function mainLoop(U, f1, f2, f3)
 
     # Save initial stuff
     frame = 0
-    U = freeSlipNoFlux!(U, th, indA, indB, indC)
+    U = freeSlipNoFlux!(U, Tx, Ty, Nx, Ny, indA, indB, indC)
     stop = printAndSave(1, U, frame)
     frame = 1
 
     # Do two steps of Runge-Kutta, to get first three time-levels
     f1 = odefun!(t[1], U, f1)
-    U = rk!(t[1], U)
+    U = rk3!(t[1], U, odefun!, dt, q1, q2)
     f2 = odefun!(t[2], U, f2)
-    U = rk!(t[2], U)
+    U = rk3!(t[2], U, odefun!, dt, q1, q2)
     f3 = odefun!(t[3], U, f3)
 
     for i in 3 : Int(tf/dt) + 1
 
         if mod(i-1, 2^7) == 0
-            U = freeSlipNoFlux!(U, th, indA, indB, indC)
+            U = freeSlipNoFlux!(U, Tx, Ty, Nx, Ny, indA, indB, indC)
             # Print some info and save some things
             stop = printAndSave(i, U, frame)
             if stop

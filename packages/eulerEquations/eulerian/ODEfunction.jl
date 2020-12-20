@@ -1,10 +1,12 @@
 
+include("freeSlipNoFlux.jl")
+
 function ODEfunction!(t, U, dUdt,
 Wx, Wy, aWhv, rho_0, e_0,
-th, indA, indB, indC,
+Tx, Ty, Nx, Ny, indA, indB, indC,
 Cv, R)
     
-    U = freeSlipNoFlux!(U, th, indA, indB, indC)
+    U = freeSlipNoFlux!(U, Tx, Ty, Nx, Ny, indA, indB, indC)
 
     p = U[:,1] .* R .* (U[:,4] ./ Cv)
 

@@ -5,13 +5,19 @@ using DelimitedFiles
 
 ###############################################################################
 
-include("../packages/nodes/disk/makeRadialNodes.jl")
-include("../packages/nodes/disk/appendGhostNodes.jl")
+include("../packages/nodes/connectedRectangles/zerosAndOnes.jl")
+include("../packages/nodes/connectedRectangles/adjacency.jl")
+include("../packages/nodes/connectedRectangles/refine.jl")
+include("../packages/nodes/connectedRectangles/makeNodes.jl")
+
 include("../packages/eulerEquations/getConstants.jl")
-include("../packages/eulerEquations/tangentsNormals.jl")
-include("../packages/eulerEquations/eulerian/freeSlipNoFlux.jl")
-include("../packages/eulerEquations/eulerian/ODEfunction.jl")
-include("../packages/eulerEquations/eulerian/disk/getInitialConditions.jl")
+
+include(string("../packages/eulerEquations/eulerian/connectedRectangles/",
+               "freeSlipNoFlux.jl"))
+include(string("../packages/eulerEquations/eulerian/connectedRectangles/",
+               "ODEfunction.jl"))
+include(string("../packages/eulerEquations/eulerian/connectedRectangles/",
+               "getInitialConditions.jl"))
 include("../packages/eulerEquations/eulerian/disk/getIndices.jl")
 include("../packages/phs2.jl")
 include("../packages/timeStepping/explicit/rk/rk3.jl")
@@ -24,14 +30,14 @@ include("../packages/timeStepping/explicit/ab/ab3.jl")
 # Final time
 tf = 2^-3
 
-# The radius of the circle, in meters
-radius = 10
+# Choose which domain to use
+domain = 1
 
-# Number of layers of radial nodes on the unit disk (odd number)
-layers = 33
+# The level of refinement (lowest is 1, dx = 1 / refinement)
+refinement = 1
 
 # Delta t
-dt = 2^-10 / (layers - 1)
+dt = 2^-10 / refinement
 
 # Exponent in the polyharmonic spline function
 phs = 5
@@ -54,18 +60,11 @@ mkdir("results")
 # Array of all times
 t = range(0, stop=tf, step=dt)
 
-# Get the nodes on the unit disk
-x, y = makeRadialNodes(layers - 2)
-dr = 1 / (layers - 3)
-
-# Modify the nodes a bit so there are matching layers near the boundary:
-x, y = appendGhostNodes!(x, y, dr)
-
-# Scale the nodes so the radius is correct (nearly):
-x = radius .* x
-y = radius .* y
-dr = sqrt((x[1] - x[2])^2 + (y[1] - y[2])^2)
-radius = radius + 3 ./ 2 .* dr
+# Get the nodes on the domain
+z1 = zerosAndOnes(domain = 1)
+A = adjacency(z1)
+z1, A = refine(refinement)
+x, y = makeNodes(z1, refinement)
 
 # Set the hyperviscosity coefficient
 if K == 2
@@ -77,14 +76,7 @@ end
 
 ###############################################################################
 
-# Get and save all of the indices for the various layers of nodes.
-
-indA, indB, indC = getIndices(x, y, dr, radius)
-
-Tx, Ty, Nx, Ny = tangentsNormals((x[indB].+x[indC])./2, (y[indB].+y[indC])./2)
-
-th = atan.(y, x)
-th = th[indA]
+# Get and save all of the indices for the various types of nodes.
 
 io = open("./results/indA.txt", "w")
 writedlm(io, indA, ' ')
@@ -102,13 +94,18 @@ close(io)
 
 # Get all of the DMs that will be needed for the ODE function
 
-Wx, tr, ind_nn =
-     getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)[[1,3,4]]
+Wx, tr, ind_nn = getDM(hcat(x[bool_noGhost], y[bool_noGhost])',
+                       hcat(x[bool_all], y[bool_all])',
+                       [1 0], phs, pol, stc, 0)[[1,3,4]]
 
-Wy = getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0;
+Wy = getDM(hcat(x[bool_noGhost], y[bool_noGhost])',
+           hcat(x[bool_all], y[bool_all])',
+           [0 1], phs, pol, stc, 0;
            tree = tr, idx = ind_nn)[1]
 
-aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K;
+aWhv = a * getDM(hcat(x[ind_noGhost], y[ind_noGhost])', 
+                 hcat(x[ind_all], y[ind_all])',
+                 [-1 -1], phs, pol, stc, K;
                  tree = tr, idx = ind_nn)[1]
 
 ###############################################################################

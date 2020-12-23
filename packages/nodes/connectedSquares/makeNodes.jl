@@ -9,8 +9,16 @@ function makeNodes(z1, refinement)
     y = range(-dx/2, stop = -dx/2 + (m-1)*dx, step = dx)
 
     X = zeros(m, n)
+    Y = zeros(m, n)
 
-    return x, y
+    for j in 1 : n
+        for i in 1 : m
+            X[i,j] = x[j]
+            Y[i,j] = y[i]
+        end
+    end
+
+    return X, Y, dx
 
 end
 

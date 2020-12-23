@@ -7,13 +7,18 @@ using DelimitedFiles
 
 include("../packages/nodes/disk/makeRadialNodes.jl")
 include("../packages/nodes/disk/appendGhostNodes.jl")
+
 include("../packages/eulerEquations/getConstants.jl")
 include("../packages/eulerEquations/tangentsNormals.jl")
+
 include("../packages/eulerEquations/eulerian/freeSlipNoFlux.jl")
 include("../packages/eulerEquations/eulerian/ODEfunction.jl")
+
 include("../packages/eulerEquations/eulerian/disk/getInitialConditions.jl")
 include("../packages/eulerEquations/eulerian/disk/getIndices.jl")
+
 include("../packages/phs2.jl")
+
 include("../packages/timeStepping/explicit/rk/rk3.jl")
 include("../packages/timeStepping/explicit/ab/ab3.jl")
 
@@ -22,7 +27,7 @@ include("../packages/timeStepping/explicit/ab/ab3.jl")
 # USER INPUT
 
 # Final time
-tf = 2^-3
+tf = 2^-2
 
 # The radius of the circle, in meters
 radius = 10

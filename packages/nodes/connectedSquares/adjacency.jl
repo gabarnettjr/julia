@@ -38,6 +38,8 @@ function adjacency(A)
                     B[i,j] = 123
                 elseif tmp == [1 1 0 1]
                     B[i,j] = 124
+                elseif tmp == [1 0 1 1]
+                    B[i,j] = 134
                 elseif tmp == [0 1 1 1]
                     B[i,j] = 234
                 elseif tmp == [1 1 1 1]
@@ -112,6 +114,8 @@ function adjacency(A)
                     C[i,j] = -123
                 elseif tmp == [1 1 0 1]
                     C[i,j] = -124
+                elseif tmp == [1 0 1 1]
+                    C[i,j] = -134
                 elseif tmp == [0 1 1 1]
                     C[i,j] = -234
                 elseif tmp == [1 1 1 1]

@@ -5,21 +5,28 @@ using DelimitedFiles
 
 ###############################################################################
 
-include("../packages/nodes/connectedRectangles/zerosAndOnes.jl")
-include("../packages/nodes/connectedRectangles/adjacency.jl")
-include("../packages/nodes/connectedRectangles/refine.jl")
-include("../packages/nodes/connectedRectangles/makeNodes.jl")
+include("../packages/nodes/connectedSquares/zerosAndOnes.jl")
+include("../packages/nodes/connectedSquares/adjacency.jl")
+include("../packages/nodes/connectedSquares/refine.jl")
+include("../packages/nodes/connectedSquares/makeNodes.jl")
+include("../packages/nodes/connectedSquares/getBooleans.jl")
+include("../packages/nodes/connectedSquares/getIndices.jl")
 
 include("../packages/eulerEquations/getConstants.jl")
 
-include(string("../packages/eulerEquations/eulerian/connectedRectangles/",
+include(string(("../packages/eulerEquations/eulerian/connectedSquares/",
+                "matsToVecs.jl"))
+include(string(("../packages/eulerEquations/eulerian/connectedSquares/",
+                "vecsToMats.jl"))
+# include(string("../packages/eulerEquations/eulerian/connectedSquares/",
+#                "getInitialConditions.jl"))
+include(string("../packages/eulerEquations/eulerian/connectedSquares/",
                "freeSlipNoFlux.jl"))
-include(string("../packages/eulerEquations/eulerian/connectedRectangles/",
-               "ODEfunction.jl"))
-include(string("../packages/eulerEquations/eulerian/connectedRectangles/",
-               "getInitialConditions.jl"))
-include("../packages/eulerEquations/eulerian/disk/getIndices.jl")
+# include(string("../packages/eulerEquations/eulerian/connectedSquares/",
+#                "ODEfunction.jl"))
+
 include("../packages/phs2.jl")
+
 include("../packages/timeStepping/explicit/rk/rk3.jl")
 include("../packages/timeStepping/explicit/ab/ab3.jl")
 
@@ -60,16 +67,32 @@ mkdir("results")
 # Array of all times
 t = range(0, stop=tf, step=dt)
 
-# Get the nodes on the domain
+# Get the matrix of zeros and ones that defines the room shape
 z1 = zerosAndOnes(domain = 1)
+
+# Get the matrix of numbers that defines the adjacency of each square
 A = adjacency(z1)
-z1, A = refine(refinement)
-x, y = makeNodes(z1, refinement)
+
+# Refine to the requested refinement level
+z1, A = refine!(z1, A, refinement)
+
+# Define the x and y coordinates (x and y are matrices, meshgrid style)
+x, y, dx = makeNodes(z1, refinement)
+
+# Get the BitArray matrices to extract certain nodes
+bool_all, bool_noGhost = getBooleans(A)
+
+# Get all the indices that might be used to enforce the boundary conditions
+i_n1, j_n1, i_n2, j_n2, i_n3, j_n3, i_n4, j_n4,
+i_n12, j_n12, i_n13, j_n13, i_n14, j_n14, i_n23, j_n23,
+i_n24, j_n24, i_n34, j_n34,
+i_n123, j_n123, i_n124, j_n124, i_n134, j_n134, i_n234, j_n234,
+i_n1234, j_n1234 = getIndices(A)
 
 # Set the hyperviscosity coefficient
 if K == 2
     # a = 0
-    a = -2^4 * dr ^ (2*K-1)
+    a = -2^4 * dx ^ (2*K-1)
 else
     error("K should be 2.")
 end

@@ -35,12 +35,16 @@ i_n12, j_n12, i_n14, j_n14, i_n23, j_n23, i_n34, j_n34)
     end
 
     for k in 1 : length(i_n12)
-        # extrapolate rho and e:
-        tmp1 = 2 .* U[i_n12[k] + 1, j_n12[k],     [1,4]] .-
-                    U[i_n12[k] + 2, j_n12[k],     [1,4]]
-        tmp2 = 2 .* U[i_n12[k],     j_n12[k] + 1, [1,4]] .-
-                    U[i_n12[k],     j_n12[k] + 2, [1,4]]
-        U[i_n12[k], j_n12[k], [1,4]] = (tmp1 .+ tmp2) ./ 2
+        # # extrapolate rho and e from both sides and average:
+        # tmp1 = 2 .* U[i_n12[k] + 1, j_n12[k],     [1,4]] .-
+        #             U[i_n12[k] + 2, j_n12[k],     [1,4]]
+        # tmp2 = 2 .* U[i_n12[k],     j_n12[k] + 1, [1,4]] .-
+        #             U[i_n12[k],     j_n12[k] + 2, [1,4]]
+        # U[i_n12[k], j_n12[k], [1,4]] = (tmp1 .+ tmp2) ./ 2
+        # just extrapolate diagonally:
+        U[i_n12[k], j_n12[k], [1,4]] =
+            2 .* U[i_n12[k] + 1, j_n12[k] + 1, [1,4]] .-
+                 U[i_n12[k] + 2, j_n12[k] + 2, [1,4]]
         # enforce no flux on u:
         U[i_n12[k], j_n12[k], 2] = -U[i_n12[k],     j_n12[k] + 1, 2]
         # enforce no flux on v:
@@ -49,11 +53,14 @@ i_n12, j_n12, i_n14, j_n14, i_n23, j_n23, i_n34, j_n34)
 
     for k in 1 : length(i_n14)
         # extrapolate rho and e:
-        tmp1 = 2 .* U[i_n14[k] - 1, j_n14[k],     [1,4]] .-
-                    U[i_n14[k] - 2, j_n14[k],     [1,4]]
-        tmp2 = 2 .* U[i_n14[k],     j_n14[k] + 1, [1,4]] .-
-                    U[i_n14[k],     j_n14[k] + 2, [1,4]]
-        U[i_n14[k], j_n14[k], [1,4]] = (tmp1 .+ tmp2) ./ 2
+        # tmp1 = 2 .* U[i_n14[k] - 1, j_n14[k],     [1,4]] .-
+        #             U[i_n14[k] - 2, j_n14[k],     [1,4]]
+        # tmp2 = 2 .* U[i_n14[k],     j_n14[k] + 1, [1,4]] .-
+        #             U[i_n14[k],     j_n14[k] + 2, [1,4]]
+        # U[i_n14[k], j_n14[k], [1,4]] = (tmp1 .+ tmp2) ./ 2
+        U[i_n14[k], j_n14[k], [1,4]] =
+            2 .* U[i_n14[k] - 1, j_n14[k] + 1, [1,4]] .-
+                 U[i_n14[k] - 2, j_n14[k] + 2, [1,4]]
         # enforce no flux on u:
         U[i_n14[k], j_n14[k], 2] = -U[i_n14[k],     j_n14[k] + 1, 2]
         # enforce no flux on v:
@@ -62,11 +69,14 @@ i_n12, j_n12, i_n14, j_n14, i_n23, j_n23, i_n34, j_n34)
 
     for k in 1 : length(i_n23)
         # extrapolate rho and e:
-        tmp1 = 2 .* U[i_n23[k] + 1, j_n23[k],     [1,4]] .-
-                    U[i_n23[k] + 2, j_n23[k],     [1,4]]
-        tmp2 = 2 .* U[i_n23[k],     j_n23[k] - 1, [1,4]] .-
-                    U[i_n23[k],     j_n23[k] - 2, [1,4]]
-        U[i_n23[k], j_n23[k], [1,4]] = (tmp1 .+ tmp2) ./ 2
+        # tmp1 = 2 .* U[i_n23[k] + 1, j_n23[k],     [1,4]] .-
+        #             U[i_n23[k] + 2, j_n23[k],     [1,4]]
+        # tmp2 = 2 .* U[i_n23[k],     j_n23[k] - 1, [1,4]] .-
+        #             U[i_n23[k],     j_n23[k] - 2, [1,4]]
+        # U[i_n23[k], j_n23[k], [1,4]] = (tmp1 .+ tmp2) ./ 2
+        U[i_n23[k], j_n23[k], [1,4]] =
+            2 .* U[i_n23[k] + 1, j_n23[k] - 1, [1,4]] .-
+                 U[i_n23[k] + 2, j_n23[k] - 2, [1,4]]
         # enforce no flux on u:
         U[i_n23[k], j_n23[k], 2] = -U[i_n23[k],     j_n23[k] - 1, 2]
         # enforce no flux on v:
@@ -75,15 +85,21 @@ i_n12, j_n12, i_n14, j_n14, i_n23, j_n23, i_n34, j_n34)
 
     for k in 1 : length(i_n34)
         # extrapolate rho and e:
-        tmp1 = 2 .* U[i_n34[k] - 1, j_n34[k],     [1,4]] .-
-                    U[i_n34[k] - 2, j_n34[k],     [1,4]]
-        tmp2 = 2 .* U[i_n34[k],     j_n34[k] - 1, [1,4]] .-
-                    U[i_n34[k],     j_n34[k] - 2, [1,4]]
-        U[i_n34[k], j_n34[k], [1,4]] = (tmp1 .+ tmp2) ./ 2
+        # tmp1 = 2 .* U[i_n34[k] - 1, j_n34[k],     [1,4]] .-
+        #             U[i_n34[k] - 2, j_n34[k],     [1,4]]
+        # tmp2 = 2 .* U[i_n34[k],     j_n34[k] - 1, [1,4]] .-
+        #             U[i_n34[k],     j_n34[k] - 2, [1,4]]
+        # U[i_n34[k], j_n34[k], [1,4]] = (tmp1 .+ tmp2) ./ 2
+        U[i_n34[k], j_n34[k], [1,4]] =
+            2 .* U[i_n34[k] - 1, j_n34[k] - 1, [1,4]] .-
+                 U[i_n34[k] - 2, j_n34[k] - 2, [1,4]]
         # enforce no flux on u:
-        U[i_n34[k], j_n34[k], 2] = -U[i_n34[k],     j_n34[k] - 1, 2]
+        u = -U[i_n34[k],     j_n34[k] - 1, 2]
         # enforce no flux on v:
-        U[i_n34[k], j_n34[k], 3] = -U[i_n34[k] - 1, j_n34[k],     3]
+        v = -U[i_n34[k] - 1, j_n34[k],     3]
+        # enforce diagonal flux being zero (this might be more important)
+        U[i_n34[k], j_n34[k], 2] = u - 1/2 * (u + v)
+        U[i_n34[k], j_n34[k], 3] = v - 1/2 * (u + v)
     end
 
     return U

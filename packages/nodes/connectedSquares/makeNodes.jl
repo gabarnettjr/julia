@@ -1,15 +1,17 @@
 
-function makeNodes(z1, refinement)
+function makeNodes(z1, refinement, wid, len)
 
-    dx = 1 / refinement
+    dx = 1 / 2 ^ (refinement - 1)
 
     m, n = size(z1)
 
-    x = range(-dx/2, stop = -dx/2 + (n-1)*dx, step = dx)
-    y = range(-dx/2, stop = -dx/2 + (m-1)*dx, step = dx)
+    tmp = dx/2 + (2^(refinement-1) - 1) * dx
 
-    X = zeros(m, n)
-    Y = zeros(m, n)
+    x = range(-tmp, stop = wid + tmp, step = dx)
+    y = range(-tmp, stop = len + tmp, step = dx)
+
+    X = zeros(Float64, m, n)
+    Y = zeros(Float64, m, n)
 
     for j in 1 : n
         for i in 1 : m

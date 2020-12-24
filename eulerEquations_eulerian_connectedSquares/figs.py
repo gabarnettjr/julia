@@ -26,8 +26,8 @@ outstr = 'figures/'
 
 # Set the contour levels
 if whatToPlot == "rho":
-    # clevels = 20
-    clevels = np.arange(-17, 19, 2) * 1e-3
+    clevels = 20
+    # clevels = np.arange(-17, 19, 2) * 1e-3
 elif whatToPlot == "u":
     # clevels = 20
     clevels = np.arange(-23, 25, 2) * 1e-1
@@ -62,40 +62,30 @@ with open(instr + 'y.txt') as f:
     for line in f:
         y = np.hstack((y, np.float(line)))
 
-# Load the radius of the boundary of the disk
-radius = np.array([], float)
-with open(instr + 'radius.txt') as f:
-    for line in f:
-        radius = np.hstack((radius, np.float(line)))
-radius = radius[0]
-
 ###############################################################################
 
 # plot the nodes and save the plot
 
-indA = np.array([], int)
-with open(instr + 'indA.txt') as f:
-    for line in f:
-        indA = np.hstack((indA, np.int(line) - 1))
-
-indB = np.array([], int)
-with open(instr + 'indB.txt') as f:
-    for line in f:
-        indB = np.hstack((indB, np.int(line) - 1))
-
-indC = np.array([], int)
-with open(instr + 'indC.txt') as f:
-    for line in f:
-        indC = np.hstack((indC, np.int(line) - 1))
-
-th = np.linspace(0, 2*np.pi, 250)
+# indA = np.array([], int)
+# with open(instr + 'indA.txt') as f:
+#     for line in f:
+#         indA = np.hstack((indA, np.int(line) - 1))
+# 
+# indB = np.array([], int)
+# with open(instr + 'indB.txt') as f:
+#     for line in f:
+#         indB = np.hstack((indB, np.int(line) - 1))
+# 
+# indC = np.array([], int)
+# with open(instr + 'indC.txt') as f:
+#     for line in f:
+#         indC = np.hstack((indC, np.int(line) - 1))
 
 fig = plt.figure(figsize = (12, 10))
 plt.plot(x, y, 'k.', \
-         radius*np.cos(th), radius*np.sin(th), 'k', \
-         x[indA], y[indA], 'rs', \
-         x[indB], y[indB], 'gs', \
-         x[indC], y[indC], 'ys', \
+         # x[indA], y[indA], 'rs', \
+         # x[indB], y[indB], 'gs', \
+         # x[indC], y[indC], 'ys', \
          markersize = 5, fillstyle = 'none')
 plt.axis('equal')
 fig.savefig(outstr + 'nodes.png', bbox_inches = 'tight')
@@ -168,10 +158,8 @@ while True:
             sys.exit("Not a valid thing to  plot.")
         fig.colorbar(cs)
         plt.axis('equal')
-        plt.axis(12 * np.array([-1,1,-1,1]))
+        # plt.axis(12 * np.array([-1,1,-1,1]))
 
-        plt.plot(radius*np.cos(th), radius*np.sin(th), 'k')
-        
         fig.savefig(outstr + '{0:04d}'.format(frame) + '.png',
                 bbox_inches = 'tight')
         

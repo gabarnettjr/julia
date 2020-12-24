@@ -6,24 +6,24 @@ using DelimitedFiles
 ###############################################################################
 
 include("../packages/nodes/connectedSquares/zerosAndOnes.jl")
-include("../packages/nodes/connectedSquares/adjacency.jl")
 include("../packages/nodes/connectedSquares/refine.jl")
+include("../packages/nodes/connectedSquares/adjacency.jl")
 include("../packages/nodes/connectedSquares/makeNodes.jl")
 include("../packages/nodes/connectedSquares/getBooleans.jl")
 include("../packages/nodes/connectedSquares/getIndices.jl")
 
 include("../packages/eulerEquations/getConstants.jl")
 
-include(string(("../packages/eulerEquations/eulerian/connectedSquares/",
+include(string("../packages/eulerEquations/eulerian/connectedSquares/",
                 "matsToVecs.jl"))
-include(string(("../packages/eulerEquations/eulerian/connectedSquares/",
+include(string("../packages/eulerEquations/eulerian/connectedSquares/",
                 "vecsToMats.jl"))
-# include(string("../packages/eulerEquations/eulerian/connectedSquares/",
-#                "getInitialConditions.jl"))
+include(string("../packages/eulerEquations/eulerian/connectedSquares/",
+               "getInitialConditions.jl"))
 include(string("../packages/eulerEquations/eulerian/connectedSquares/",
                "freeSlipNoFlux.jl"))
-# include(string("../packages/eulerEquations/eulerian/connectedSquares/",
-#                "ODEfunction.jl"))
+include(string("../packages/eulerEquations/eulerian/connectedSquares/",
+               "ODEfunction.jl"))
 
 include("../packages/phs2.jl")
 
@@ -41,10 +41,10 @@ tf = 2^-3
 domain = 1
 
 # The level of refinement (lowest is 1, dx = 1 / refinement)
-refinement = 1
+refinement = 3
 
 # Delta t
-dt = 2^-10 / refinement
+dt = 2^-12 / 2^refinement
 
 # Exponent in the polyharmonic spline function
 phs = 5
@@ -68,19 +68,22 @@ mkdir("results")
 t = range(0, stop=tf, step=dt)
 
 # Get the matrix of zeros and ones that defines the room shape
-z1 = zerosAndOnes(domain = 1)
+z1, wid, len = zerosAndOnes(domain = 1)
+
+# Refine to the requested refinement level
+for i in 2 : refinement
+    global z1
+    z1 = refine!(z1)
+end
 
 # Get the matrix of numbers that defines the adjacency of each square
 A = adjacency(z1)
 
-# Refine to the requested refinement level
-z1, A = refine!(z1, A, refinement)
-
 # Define the x and y coordinates (x and y are matrices, meshgrid style)
-x, y, dx = makeNodes(z1, refinement)
+x, y, dx = makeNodes(z1, refinement, wid, len)
 
 # Get the BitArray matrices to extract certain nodes
-bool_all, bool_noGhost = getBooleans(A)
+bool_all, bool_noGhost, nanMats, zeroVecs = getBooleans(A)
 
 # Get all the indices that might be used to enforce the boundary conditions
 i_n1, j_n1, i_n2, j_n2, i_n3, j_n3, i_n4, j_n4,
@@ -92,7 +95,7 @@ i_n1234, j_n1234 = getIndices(A)
 # Set the hyperviscosity coefficient
 if K == 2
     # a = 0
-    a = -2^4 * dx ^ (2*K-1)
+    a = -2^3 * dx ^ (2*K-1)
 else
     error("K should be 2.")
 end
@@ -101,33 +104,33 @@ end
 
 # Get and save all of the indices for the various types of nodes.
 
-io = open("./results/indA.txt", "w")
-writedlm(io, indA, ' ')
-close(io)
-
-io = open("./results/indB.txt", "w")
-writedlm(io, indB, ' ')
-close(io)
-
-io = open("./results/indC.txt", "w")
-writedlm(io, indC, ' ')
-close(io)
+# io = open("./results/indA.txt", "w")
+# writedlm(io, indA, ' ')
+# close(io)
+# 
+# io = open("./results/indB.txt", "w")
+# writedlm(io, indB, ' ')
+# close(io)
+# 
+# io = open("./results/indC.txt", "w")
+# writedlm(io, indC, ' ')
+# close(io)
 
 ###############################################################################
 
 # Get all of the DMs that will be needed for the ODE function
 
-Wx, tr, ind_nn = getDM(hcat(x[bool_noGhost], y[bool_noGhost])',
+Wx, tr, ind_nn = getDM(hcat(x[bool_all], y[bool_all])',
                        hcat(x[bool_all], y[bool_all])',
                        [1 0], phs, pol, stc, 0)[[1,3,4]]
 
-Wy = getDM(hcat(x[bool_noGhost], y[bool_noGhost])',
+Wy = getDM(hcat(x[bool_all], y[bool_all])',
            hcat(x[bool_all], y[bool_all])',
            [0 1], phs, pol, stc, 0;
            tree = tr, idx = ind_nn)[1]
 
-aWhv = a * getDM(hcat(x[ind_noGhost], y[ind_noGhost])', 
-                 hcat(x[ind_all], y[ind_all])',
+aWhv = a * getDM(hcat(x[bool_all], y[bool_all])', 
+                 hcat(x[bool_all], y[bool_all])',
                  [-1 -1], phs, pol, stc, K;
                  tree = tr, idx = ind_nn)[1]
 
@@ -137,7 +140,7 @@ aWhv = a * getDM(hcat(x[ind_noGhost], y[ind_noGhost])',
 
 Cv, R = getConstants()
 
-rho_0, u_0, v_0, e_0, p_0 = getInitialConditions(x, Cv, R)
+rho_0, u_0, v_0, e_0, p_0 = getInitialConditions(x[bool_all], Cv, R, domain)
 
 io = open("./results/rho_0.txt", "w")
 writedlm(io, rho_0, ' ')
@@ -155,7 +158,7 @@ io = open("./results/e_0.txt", "w")
 writedlm(io, e_0, ' ')
 close(io)
 
-U = zeros(length(x), 4)
+U = zeros(size(x[bool_all])[1], 4)
 U[:,1] = rho_0
 U[:,2] = u_0
 U[:,3] = v_0
@@ -176,10 +179,13 @@ f3 = zeros(size(U))                                             #needed for AB3
 
 # Define an ODE function which can be passed to rk
 
-odefun! = (t, U, dUdt) -> ODEfunction!(t, U, dUdt,
-                                       Wx, Wy, aWhv, rho_0, e_0,
-                                       Tx, Ty, Nx, Ny, indA, indB, indC,
-                                       Cv, R)
+odefun! = (t, U, dUdt) ->
+    ODEfunction!(t, U, dUdt,
+                 Wx, Wy, aWhv, rho_0, e_0,
+                 i_n1, j_n1, i_n2, j_n2, i_n3, j_n3, i_n4, j_n4,
+                 i_n12, j_n12, i_n14, j_n14, i_n23, j_n23, i_n34, j_n34,
+                 bool_all, nanMats, zeroVecs,
+                 Cv, R)
 
 ###############################################################################
 
@@ -231,7 +237,10 @@ function mainLoop(U, f1, f2, f3)
 
     # Save initial stuff
     frame = 0
-    U = freeSlipNoFlux!(U, Tx, Ty, Nx, Ny, indA, indB, indC)
+    U = vecsToMats!(U, bool_all, nanMats)
+    U = freeSlipNoFlux!(U, i_n1, j_n1, i_n2, j_n2, i_n3, j_n3, i_n4, j_n4,
+                        i_n12, j_n12, i_n14, j_n14, i_n23, j_n23, i_n34, j_n34)
+    U = matsToVecs!(U, bool_all, zeroVecs)
     stop = printAndSave(1, U, frame)
     frame = 1
 
@@ -245,7 +254,11 @@ function mainLoop(U, f1, f2, f3)
     for i in 3 : Int(tf/dt) + 1
 
         if mod(i-1, 2^7) == 0
-            U = freeSlipNoFlux!(U, Tx, Ty, Nx, Ny, indA, indB, indC)
+            U = vecsToMats!(U, bool_all, nanMats)
+            U = freeSlipNoFlux!(U, i_n1, j_n1, i_n2, j_n2, i_n3, j_n3,
+                                i_n4, j_n4, i_n12, j_n12, i_n14, j_n14,
+                                i_n23, j_n23, i_n34, j_n34)
+            U = matsToVecs!(U, bool_all, zeroVecs)
             # Print some info and save some things
             stop = printAndSave(i, U, frame)
             if stop
@@ -272,15 +285,11 @@ mainLoop(U, f1, f2, f3)
 # Save things that will be needed in the python plotting routine.
 
 io = open("./results/x.txt", "w")
-writedlm(io, x, ' ')
+writedlm(io, x[bool_all], ' ')
 close(io)
 
 io = open("./results/y.txt", "w")
-writedlm(io, y, ' ')
-close(io)
-
-io = open("./results/radius.txt", "w")
-writedlm(io, radius, ' ')
+writedlm(io, y[bool_all], ' ')
 close(io)
 
 io = open("./results/t.txt", "w")

@@ -5,14 +5,15 @@ function ODEfunction!(t, U, dUdt,
                       Wx, Wy, aWhv, rho_0, e_0,
                       i_n1, j_n1, i_n2, j_n2, i_n3, j_n3, i_n4, j_n4,
                       i_n12, j_n12, i_n14, j_n14, i_n23, j_n23, i_n34, j_n34,
+                      bool_all, nanMats, zeroVecs,
                       Cv, R)
     
-    U = vecsToMats(U)
+    U = vecsToMats!(U, bool_all, nanMats)
 
     U = freeSlipNoFlux!(U, i_n1, j_n1, i_n2, j_n2, i_n3, j_n3, i_n4, j_n4,
                         i_n12, j_n12, i_n14, j_n14, i_n23, j_n23, i_n34, j_n34)
 
-    U = matsToVecs(U)
+    U = matsToVecs!(U, bool_all, zeroVecs)
 
     p = U[:,1] .* R .* (U[:,4] ./ Cv)
 

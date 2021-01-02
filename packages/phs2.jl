@@ -257,10 +257,14 @@ end
     K   : hyperviscosity exponent
 
 # Output
-    w : differentiation matrix
+    W    : sparse differentiation matrix
+    w    : non-sparse version with the weights arranged in columns
+    jj   : index of nearest neighbors arranged in columns, just like w
+    tree : the KDTree
+    idx  : the index of nearest neighbors, as returned by knn()
 """
 function getDM(z, x, m, phs, pol, stc, K;
-               tree = KDTree(x), idx = (), getSparse = true)
+               tree = KDTree(x), idx = ())
     
     Lz = size(z, 2)
     Lx = size(x, 2)
@@ -279,11 +283,9 @@ function getDM(z, x, m, phs, pol, stc, K;
         w[:,i] = getWeights(z[:,i], x[:,idx[i]], m, phs, pol, K)
     end
 
-    if getSparse
-        w = sparse(ii[:], jj[:], w[:], Lz, Lx)
-    end
+    W = sparse(ii[:], jj[:], w[:], Lz, Lx)
 
-    return w, jj, tree, idx
+    return W, w, jj, tree, idx
 
 end
 

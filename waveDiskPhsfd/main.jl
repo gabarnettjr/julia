@@ -93,9 +93,13 @@ ni = length(x[ii])
 nb = length(x[bb])
 
 # Get all of the DMs that will be needed for the wave equation
-cWx = c * getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)
-cWy = c * getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0)
-aWhv = a * getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K)
+cWx, tr, ind_nn = getDM(hcat(x,y)', hcat(x,y)', [1 0],
+                        phs, pol, stc, 0)[[1,4,5]]
+cWx = c .* cWx
+cWy = c .* getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0;
+                 tree = tr, idx = ind_nn)[1]
+aWhv = a .* getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K;
+                  tree = tr, idx = ind_nn)[1]
 
 #####################################################################
 

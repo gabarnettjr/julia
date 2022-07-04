@@ -1,10 +1,11 @@
 
 function getConstants()
     
-    Cv = 717
-    R = 287
+    Cp = 1004.
+    Cv = 717.
+    R = Cp - Cv # = 287
     
-    return Cv, R
+    return Cp, Cv, R
     
 end
 

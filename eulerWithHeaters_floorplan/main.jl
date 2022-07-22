@@ -18,7 +18,7 @@ const floorplan = "square"
 # dr=1/7 => 6 layers wide.
 # dr should be one divided by an odd number (5, 7, 9, ...).
 # This is so the middle of a given block is a single row or column.
-const k = 13
+const k = 5
 const dr = 1/k
 # const overlap = Int((k-1)/2) * dr
 

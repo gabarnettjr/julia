@@ -147,8 +147,8 @@ end
 ###############################################################################
 
 # Remove old files and remake the results directory
-rm("results", recursive = true)
-mkdir("results")
+rm("../../../results", recursive = true)
+mkdir("../../../results")
 
 # Array of times when things are saved
 const tSaves = range(0, stop = tf, length = numSaves)
@@ -184,20 +184,20 @@ function save(fileName, variable)
     close(io)
 end
 
-save("./results/x.txt",           x)
-save("./results/y.txt",           y)
-save("./results/dr.txt",         dr)
-save("./results/Cp.txt",         Cp)
-save("./results/Cv.txt",         Cv)
-save("./results/R.txt",           R)
-save("./results/tSaves.txt", tSaves)
-save("./results/bb.txt",         bb)
-save("./results/ff2.txt",       ff2)
-save("./results/ff3.txt",       ff3)
-save("./results/ff4.txt",       ff4)
-save("./results/ff5.txt",       ff5)
-save("./results/xNon.txt",     xNon)
-save("./results/yNon.txt",     yNon)
+save("../../../results/x.txt",           x)
+save("../../../results/y.txt",           y)
+save("../../../results/dr.txt",         dr)
+save("../../../results/Cp.txt",         Cp)
+save("../../../results/Cv.txt",         Cv)
+save("../../../results/R.txt",           R)
+save("../../../results/tSaves.txt", tSaves)
+save("../../../results/bb.txt",         bb)
+save("../../../results/ff2.txt",       ff2)
+save("../../../results/ff3.txt",       ff3)
+save("../../../results/ff4.txt",       ff4)
+save("../../../results/ff5.txt",       ff5)
+save("../../../results/xNon.txt",     xNon)
+save("../../../results/yNon.txt",     yNon)
 
 ###############################################################################
 
@@ -224,9 +224,9 @@ const rho_0_avg = ((1/4)*sum(rho_0[cs1]) + (2/4)*sum(rho_0[cs2]) +
 # E_0_avg = ((1/4)*sum(E_0[cs1]) + (2/4)*sum(E_0[cs2]) +
 #            (3/4)*sum(E_0[cs3]) + (4/4)*sum(E_0[cs4])) / numSquares
 
-save("./results/rho_0.txt", rho_0)
-save("./results/p_0.txt",     p_0)
-save("./results/T_0.txt",     T_0)
+save("../../../results/rho_0.txt", rho_0)
+save("../../../results/p_0.txt",     p_0)
+save("../../../results/T_0.txt",     T_0)
 
 # Set initial conditions for main solution U
 U = q(zeros(length(x)), zeros(length(x)), copy(rho_0), copy(T_0))
@@ -290,12 +290,12 @@ function printAndSave!(i, U, xt, yt, frame, maxVel, minP, maxP, minRho, maxRho, 
 
     @printf("minP = %6.0f,  minRho = %8.5f,  minU = %5.1f,  minV = %5.1f,  minT = %7.4f\n\n", minP[fp1], minRho[fp1], minU[fp1], minV[fp1], minT[fp1])
 
-    save(@sprintf("./results/u_%04d.txt",frame),     U.u)
-    save(@sprintf("./results/v_%04d.txt",frame),     U.v)
-    save(@sprintf("./results/rho_%04d.txt",frame), U.rho)
-    save(@sprintf("./results/T_%04d.txt",frame),     U.T)
-    save(@sprintf("./results/xt_%04d.txt",frame),     xt)
-    save(@sprintf("./results/yt_%04d.txt",frame),     yt)
+    save(@sprintf("../../../results/u_%04d.txt",frame),     U.u)
+    save(@sprintf("../../../results/v_%04d.txt",frame),     U.v)
+    save(@sprintf("../../../results/rho_%04d.txt",frame), U.rho)
+    save(@sprintf("../../../results/T_%04d.txt",frame),     U.T)
+    save(@sprintf("../../../results/xt_%04d.txt",frame),     xt)
+    save(@sprintf("../../../results/yt_%04d.txt",frame),     yt)
 
     stop = false
 
@@ -403,17 +403,17 @@ function mainLoop(U::q)
 
     end
     
-    save("./results/maxVel.txt", maximum(maxVel))
-    save("./results/minP.txt",     minimum(minP))
-    save("./results/maxP.txt",     maximum(maxP))
-    save("./results/minRho.txt", minimum(minRho))
-    save("./results/maxRho.txt", maximum(maxRho))
-    save("./results/minU.txt",     minimum(minU))
-    save("./results/maxU.txt",     maximum(maxU))
-    save("./results/minV.txt",     minimum(minV))
-    save("./results/maxV.txt",     maximum(maxV))
-    save("./results/minT.txt",     minimum(minT))
-    save("./results/maxT.txt",     maximum(maxT))
+    save("../../../results/maxVel.txt", maximum(maxVel))
+    save("../../../results/minP.txt",     minimum(minP))
+    save("../../../results/maxP.txt",     maximum(maxP))
+    save("../../../results/minRho.txt", minimum(minRho))
+    save("../../../results/maxRho.txt", maximum(maxRho))
+    save("../../../results/minU.txt",     minimum(minU))
+    save("../../../results/maxU.txt",     maximum(maxU))
+    save("../../../results/minV.txt",     minimum(minV))
+    save("../../../results/maxV.txt",     maximum(maxV))
+    save("../../../results/minT.txt",     minimum(minT))
+    save("../../../results/maxT.txt",     maximum(maxT))
 
 end
 

@@ -48,7 +48,7 @@ else:
 if len(sys.argv) == 5:
     instr = sys.argv[4]
 else:
-    instr = 'results/'
+    instr = '../../../results/'
 
 # Get the variable string
 varstr = instr + whatToPlot

@@ -54,7 +54,7 @@ else:
 varstr = instr + whatToPlot
 
 # Directory where the *.png files will end up (out string)
-outstr = 'figures/'
+outstr = ".." + os.sep + ".." + os.sep + ".." + os.sep + "figures" + os.sep
 
 ###############################################################################
 

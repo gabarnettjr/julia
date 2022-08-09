@@ -66,8 +66,8 @@ function ODEfunction!(t::Float64, U::q, dUdt::q,
     dUdt.T[ci.ff4] .= heatPrime(t; td = tempDiff)
     dUdt.T[ci.ff5] .= heatPrime(t; td = tempDiff)
 
-    # Enforce Dirichlet BC for the temperature (not sure about this)
-    dUdt.T[ci.bb] .= 0.
+    # # Enforce Dirichlet BC for the temperature (not sure about this)
+    # dUdt.T[ci.bb] .= 0.
 
     # # Enforce Neumann BC for the temperature (not sure about this)
     # dUdt.T[bb] = dUdt.T[bc]

@@ -8,7 +8,7 @@ using DelimitedFiles
 # USER INPUT
 
 # Final time (power of 2)
-const tf = 2^3
+const tf = 2^2
 
 # The type of floorplan
 const floorplan = "square"
@@ -18,7 +18,7 @@ const floorplan = "square"
 # dr=1/7 => 6 layers wide.
 # dr should be one divided by an odd number (5, 7, 9, ...).
 # This is so the middle of a given block is a single row or column.
-const k = 5
+const k = 11
 const dr = 1/k
 # const overlap = Int((k-1)/2) * dr
 
@@ -203,11 +203,14 @@ save("../../../results/yNon.txt",     yNon)
 
 # Get all of the weights that will be needed in the ODE function
 
-const wx, jj, tr, ind_nn = phs2_getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol, stc, 0)[2:5]
+const wx, jj, tr, ind_nn = phs2_getDM(hcat(x,y)', hcat(x,y)', [1 0], phs, pol,
+                                      stc, 0)[2:5]
 
-const wy = phs2_getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0; tree = tr, idx = ind_nn)[2]
+const wy = phs2_getDM(hcat(x,y)', hcat(x,y)', [0 1], phs, pol, stc, 0;
+                      tree = tr, idx = ind_nn)[2]
 
-const awhv = a .* phs2_getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K; tree = tr, idx = ind_nn)[2]
+const awhv = a .* phs2_getDM(hcat(x,y)', hcat(x,y)', [-1 -1], phs, pol, stc, K;
+                             tree = tr, idx = ind_nn)[2]
 
 ###############################################################################
 
